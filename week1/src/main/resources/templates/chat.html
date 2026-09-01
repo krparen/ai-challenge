@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<title>AI Challenge — Week 1</title>
+	<style>
+		body { font-family: sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #222; }
+		textarea { width: 100%; box-sizing: border-box; font: inherit; }
+		button { margin-top: 8px; padding: 8px 24px; }
+		.answer, .error { padding: 16px; border-radius: 8px; white-space: pre-wrap; margin-top: 8px; }
+		.answer { background: #f0f4f0; }
+		.error { background: #f8e8e8; color: #902020; }
+	</style>
+</head>
+<body>
+	<h1>Чат с DeepSeek</h1>
+	<form method="post" action="/chat">
+		<textarea name="message" rows="4" placeholder="Введите сообщение..." required th:text="${message}"></textarea>
+		<br>
+		<button type="submit">Отправить</button>
+	</form>
+	<div th:if="${answer}">
+		<h2>Ответ</h2>
+		<div class="answer" th:text="${answer}"></div>
+	</div>
+	<div th:if="${error}" class="error" th:text="${error}"></div>
+</body>
+</html>
