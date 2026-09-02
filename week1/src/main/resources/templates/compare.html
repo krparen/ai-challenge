@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<title>AI Challenge — День 2: формат ответа</title>
+	<style>
+		body { font-family: sans-serif; max-width: 960px; margin: 40px auto; padding: 0 16px; color: #222; }
+		label { display: block; margin-top: 12px; font-weight: bold; }
+		textarea, input { width: 100%; box-sizing: border-box; font: inherit; }
+		button { margin-top: 16px; padding: 8px 24px; }
+		.columns { display: flex; gap: 16px; margin-top: 24px; }
+		.column { flex: 1; min-width: 0; }
+		.answer, .error { padding: 16px; border-radius: 8px; white-space: pre-wrap; }
+		.answer { background: #f0f4f0; }
+		.error { background: #f8e8e8; color: #902020; margin-top: 8px; }
+		h3 { margin-bottom: 4px; }
+		.hint { color: #777; font-size: 0.9em; margin-top: 2px; }
+		a { color: #2060a0; }
+	</style>
+</head>
+<body>
+	<h1>День 2: один запрос — разный контроль ответа</h1>
+	<p>Слева — запрос без ограничений. Справа — тот же запрос с параметрами из формы ниже.</p>
+	<form method="post" action="/compare">
+		<label for="message">Сообщение</label>
+		<textarea id="message" name="message" rows="3" placeholder="Введите сообщение..." required th:text="${message}"></textarea>
+
+		<label for="systemPrompt">System prompt (описание формата ответа, пусто = без него)</label>
+		<textarea id="systemPrompt" name="systemPrompt" rows="3" th:text="${systemPrompt}"></textarea>
+
+		<label for="maxTokens">Ограничение длины (maxTokens)</label>
+		<input id="maxTokens" type="number" name="maxTokens" min="1" th:value="${maxTokens}">
+
+		<label for="stopSequence">Stop-последовательность (запись \n = перенос строки, пусто = без стопа)</label>
+		<input id="stopSequence" type="text" name="stopSequence" th:value="${stopSequence}">
+
+		<label for="thinking">Thinking (рассуждения модели перед ответом)</label>
+		<select id="thinking" name="thinking">
+			<option value="false" th:selected="${!thinking}">выключен</option>
+			<option value="true" th:selected="${thinking}">включён</option>
+		</select>
+
+		<button type="submit">Сравнить</button>
+	</form>
+	<div th:if="${error}" class="error" th:text="${error}"></div>
+	<div class="columns" th:if="${baseline != null}">
+		<div class="column">
+			<h3>Без ограничений</h3>
+			<div class="hint">дефолтные настройки</div>
+			<div class="answer" th:text="${baseline}"></div>
+		</div>
+		<div class="column">
+			<h3>С ограничениями</h3>
+			<div class="hint" th:text="${'maxTokens = ' + maxTokens + ' · stop = ' + (stopSequence == '' ? 'нет' : stopSequence) + ' · thinking ' + (thinking ? 'вкл' : 'выкл') + (systemPrompt == '' ? ' · без system prompt' : ' · свой system prompt')}"></div>
+			<div class="answer" th:text="${constrained}"></div>
+		</div>
+	</div>
+	<p><a href="/">К обычному чату</a></p>
+</body>
+</html>

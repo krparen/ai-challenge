@@ -6,4 +6,6 @@ spring:
       api-key: ${DEEPSEEK_API_KEY}
       chat:
         options:
-          model: deepseek-chat
+          model: deepseek-v4-flash
+          thinking:
+            type: disabled
