@@ -48,6 +48,7 @@ public class ChatController {
 		model.addAttribute("maxTokens", 60);
 		model.addAttribute("stopSequence", "\\n\\n");
 		model.addAttribute("thinking", false);
+		model.addAttribute("temperature", 1.0);
 		return "compare";
 	}
 
@@ -57,12 +58,14 @@ public class ChatController {
 			@RequestParam(required = false, defaultValue = "60") int maxTokens,
 			@RequestParam(required = false, defaultValue = "") String stopSequence,
 			@RequestParam(required = false, defaultValue = "false") boolean thinking,
+			@RequestParam(required = false, defaultValue = "1.0") double temperature,
 			Model model) {
 		model.addAttribute("message", message);
 		model.addAttribute("systemPrompt", systemPrompt);
 		model.addAttribute("maxTokens", maxTokens);
 		model.addAttribute("stopSequence", stopSequence);
 		model.addAttribute("thinking", thinking);
+		model.addAttribute("temperature", temperature);
 		try {
 			String baseline = chatClient.prompt()
 					.user(message)
@@ -70,7 +73,8 @@ public class ChatController {
 					.content();
 
 			DeepSeekChatOptions.Builder options = DeepSeekChatOptions.builder()
-					.maxTokens(maxTokens);
+					.maxTokens(maxTokens)
+					.temperature(temperature);
 			if (thinking) {
 				options.enableThinking();
 			}
