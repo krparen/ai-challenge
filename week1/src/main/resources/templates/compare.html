@@ -43,18 +43,24 @@
 		<label for="temperature">Температура (0 = детерминированно, 2 = максимально случайно)</label>
 		<input id="temperature" type="number" name="temperature" min="0" max="2" step="0.1" th:value="${temperature}">
 
+		<label for="model">Модель (для ответа «с ограничениями»; слева всегда deepseek-v4-flash)</label>
+		<select id="model" name="model">
+			<option th:each="m : ${models}" th:value="${m}" th:text="${m}" th:selected="${m == model}"></option>
+		</select>
+
 		<button type="submit">Сравнить</button>
 	</form>
 	<div th:if="${error}" class="error" th:text="${error}"></div>
 	<div class="columns" th:if="${baseline != null}">
 		<div class="column">
 			<h3>Без ограничений</h3>
-			<div class="hint">дефолтные настройки</div>
+			<div class="hint" th:text="${baselineInfo}"></div>
 			<div class="answer" th:text="${baseline}"></div>
 		</div>
 		<div class="column">
 			<h3>С ограничениями</h3>
 			<div class="hint" th:text="${'maxTokens = ' + maxTokens + ' · stop = ' + (stopSequence == '' ? 'нет' : stopSequence) + ' · thinking ' + (thinking ? 'вкл' : 'выкл') + ' · t = ' + temperature + (systemPrompt == '' ? ' · без system prompt' : ' · свой system prompt')}"></div>
+			<div class="hint" th:text="${constrainedInfo}"></div>
 			<div class="answer" th:text="${constrained}"></div>
 		</div>
 	</div>

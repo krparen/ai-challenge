@@ -13,7 +13,8 @@
 
 - `ChatController.java` — все эндпоинты:
   - `GET /` + `POST /chat` — простой чат (день 1)
-  - `GET /compare` + `POST /compare` — сравнение «без ограничений» vs «с ограничениями» (день 2): message + поля system prompt, maxTokens (деф. 60), stopSequence (запись `\n` раскрывается в перенос, пусто = без стопа), thinking (select вкл/выкл), temperature (0–2, деф. 1.0)
+  - `GET /compare` + `POST /compare` — сравнение «без ограничений» vs «с ограничениями» (день 2): message + поля system prompt, maxTokens (деф. 60), stopSequence (запись `\n` раскрывается в перенос, пусто = без стопа), thinking (select вкл/выкл), temperature (0–2, деф. 1.0), model (select из MODELS, влияет только на правую колонку; слева всегда deepseek-v4-flash)
+  - замеры (день 5): под каждым ответом hint со временем, токенами (вход+генерация) и оценкой стоимости (цены зашиты в `pricePerMillion`, off-peak, cache-miss); usage берётся из `call().chatResponse().getMetadata().getUsage()`
 - `templates/chat.html`, `templates/compare.html` — страницы с формами, hint под правой колонкой показывает применённые параметры
 
 ## Конфигурация (`week1/src/main/resources/application.yaml`)
@@ -56,4 +57,5 @@
 ## Статус
 
 - День 1 (чат) и день 2 (сравнение с ограничениями) — сделаны и проверены живьём.
+- День 5 (переключатель моделей + замеры времени/токенов/стоимости) — сделан. Модели подписки (проверено `GET api.deepseek.com/models`): `deepseek-v4-flash`, `deepseek-v4-flash-vision-exp`, `deepseek-v4-pro`; цены off-peak за 1M (cache-miss, вход/генерация): flash и vision-exp $0.22/$0.66, pro $0.66/$1.98.
 - Новые файлы по просьбе пользователя добавлять в git-индекс (`git add`); коммиты — только по явной просьбе.
