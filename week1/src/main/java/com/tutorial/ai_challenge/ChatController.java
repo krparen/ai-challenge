@@ -79,6 +79,7 @@ public class ChatController {
 		model.addAttribute("stopSequence", stopSequence);
 		model.addAttribute("thinking", thinking);
 		model.addAttribute("temperature", temperature);
+		model.addAttribute("models", MODELS);
 		model.addAttribute("model", selectedModel);
 		try {
 			CallStats baseline = call(message, DeepSeekChatOptions.builder(), null);
