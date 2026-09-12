@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: ai_challenge_week2
+  ai:
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY}
+      chat:
+        options:
+          model: deepseek-v4-flash
+          thinking:
+            type: disabled
