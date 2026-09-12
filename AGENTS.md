@@ -7,7 +7,7 @@
 - Java 25, Maven (`mvnw.cmd`), Spring Boot **4.1.1** (стартеры нового именования: `spring-boot-starter-webmvc`, `-thymeleaf`)
 - Spring AI **2.0.1** (BOM `spring-ai-bom`), стартер `spring-ai-starter-model-deepseek`
 - Thymeleaf для страниц
-- Проекты-домашки: `week1/` (дни 1–5, см. Статус) и `week2/` (только скелет: `@RestController` c `GET /chat` → `"hello"`), пакет одинаков: `com.tutorial.ai_challenge`
+- Проекты-домашки: `week1/` (дни 1–5, см. Статус) и `week2/` (день 6: чат-агент — `ChatAgent` инкапсулирует LLM, `sendMessage(conversationId, msg)` + память бесед в `Map`; `GET/POST /chat` с PRG-редиректом, история в Thymeleaf-ленте), пакет одинаков: `com.tutorial.ai_challenge`; класс приложения в week2 пользователь переименовал в `AiChallengeApplicationWeek2`
 - Ключ в yaml week2 — через `${DEEPSEEK_API_KEY}`; в week1 пользователь вписал ключ открытым текстом (вернуть плейсхолдер до коммита!)
 
 ### Файлы week1
