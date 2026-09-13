@@ -43,6 +43,11 @@ public class ChatController {
 		String id = ensureConversation(conversationId, response);
 		model.addAttribute("conversationId", id);
 		model.addAttribute("messages", toViews(agent.getMessages(id)));
+		model.addAttribute("historyStats", agent.getHistoryStats(id));
+		conversations.findById(UUID.fromString(id)).ifPresent(c -> {
+			model.addAttribute("promptTotal", c.getPromptTokens());
+			model.addAttribute("completionTotal", c.getCompletionTokens());
+		});
 		return "chat";
 	}
 
@@ -63,7 +68,13 @@ public class ChatController {
 			HttpServletResponse response, RedirectAttributes redirect) {
 		String id = ensureConversation(conversationId, response);
 		try {
-			agent.sendMessage(id, message);
+			ChatAgent.AgentReply reply = agent.sendMessage(id, message);
+			conversations.findById(UUID.fromString(id)).ifPresent(c -> {
+				c.addUsage(reply.promptTokens(), reply.completionTokens());
+				conversations.save(c);
+			});
+			redirect.addFlashAttribute("lastPrompt", reply.promptTokens());
+			redirect.addFlashAttribute("lastCompletion", reply.completionTokens());
 		}
 		catch (RuntimeException e) {
 			redirect.addFlashAttribute("error", e.getMessage());

@@ -21,6 +21,12 @@ public class Conversation {
 	@Column(name = "closed_at")
 	private OffsetDateTime closedAt;
 
+	@Column(name = "prompt_tokens", nullable = false)
+	private long promptTokens;
+
+	@Column(name = "completion_tokens", nullable = false)
+	private long completionTokens;
+
 	protected Conversation() {
 	}
 
@@ -38,6 +44,19 @@ public class Conversation {
 
 	public OffsetDateTime getClosedAt() {
 		return closedAt;
+	}
+
+	public long getPromptTokens() {
+		return promptTokens;
+	}
+
+	public long getCompletionTokens() {
+		return completionTokens;
+	}
+
+	public void addUsage(int promptTokens, int completionTokens) {
+		this.promptTokens += promptTokens;
+		this.completionTokens += completionTokens;
 	}
 
 	public void close() {

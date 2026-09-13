@@ -1,3 +1,6 @@
+server:
+  tomcat:
+    max-http-form-post-size: 100MB
 spring:
   application:
     name: ai_challenge_week2

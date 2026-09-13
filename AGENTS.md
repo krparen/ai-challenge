@@ -7,7 +7,7 @@
 - Java 25, Maven (`mvnw.cmd`), Spring Boot **4.1.1** (стартеры нового именования: `spring-boot-starter-webmvc`, `-thymeleaf`)
 - Spring AI **2.0.1** (BOM `spring-ai-bom`), стартер `spring-ai-starter-model-deepseek`
 - Thymeleaf для страниц
-- Проекты-домашки: `week1/` (дни 1–5, см. Статус) и `week2/` (день 6: чат-агент — `ChatAgent` инкапсулирует LLM; день 7: контекст в PostgreSQL — Spring AI `ChatMemory` на `JdbcChatMemoryRepository` (таблица `SPRING_AI_CHAT_MEMORY`), беседы-метаданные через JPA (`Conversation`), миграции Liquibase; cid в cookie `conversationId`, а не в сессии — переживает рестарт; POST /chat/new закрывает беседу: `chatMemory.clear` + `closed_at`), пакет одинаков: `com.tutorial.ai_challenge`; класс приложения в week2 пользователь переименовал в `AiChallengeApplicationWeek2`
+- Проекты-домашки: `week1/` (дни 1–5, см. Статус) и `week2/` (день 6: чат-агент; день 7: контекст в PostgreSQL — Spring AI `ChatMemory` на `JdbcChatMemoryRepository` (таблица `SPRING_AI_CHAT_MEMORY`), беседы-метаданные через JPA (`Conversation`), миграции Liquibase; cid в cookie `conversationId`, а не в сессии — переживает рестарт; POST /chat/new закрывает беседу: `chatMemory.clear` + `closed_at`; день 8: токены — `ChatAgent.AgentReply` с usage (prompt/completion) каждого вызова, кумулятивные totals в колонках `conversations.prompt_tokens/completion_tokens`, оценка истории `JTokkitTokenCountEstimator` (из `spring-ai-commons`! не из model) на странице + cost off-peak; переполнение контекста проверено: лимит v4-flash = **1 048 576 токенов**, при превышении API даёт HTTP 400 → error-flash в UI, память беседы не портится), пакет одинаков: `com.tutorial.ai_challenge`; класс приложения в week2 пользователь переименовал в `AiChallengeApplicationWeek2`
 - Ключ в yaml week2 — через `${DEEPSEEK_API_KEY}`; в week1 пользователь вписал ключ открытым текстом (вернуть плейсхолдер до коммита!)
 
 ### Файлы week1
@@ -28,6 +28,8 @@
     type: disabled
   ```
   Скалярная `thinking: disabled` валит контекст: в Spring AI 2.0.1 у рекорда `Thinking` нет конвертера из строки (проверено ошибкой биндинга).
+- Токенайзер Spring AI — `org.springframework.ai.tokenizer.TokenCountEstimator`/`JTokkitTokenCountEstimator` живёт в **`spring-ai-commons`** (в `spring-ai-model` его нет — проверено листингом jar). На английском jtokkit (o200k) завышает против DeepSeek-токенайзера ~в 2 раза: 4.4M chars → jtokkit ~640k vs реальных 720k... точнее реальные были меньше; для кириллицы не проверен. Не автоконфигурируется — `new JTokkitTokenCountEstimator()`.
+- Большие POST в week2: `server.tomcat.max-http-form-post-size: 100MB` (дефолт 2MB даёт 413; кириллица в form-urlencoded раздувается ×3, ASCII почти нет). Контекст deepseek-v4-flash = 1 048 576 токенов (6.1 chars/token на этом английском тексте); превышение → HTTP 400 `invalid_request_error` с точной цифрой.
 
 ## Грабли Spring AI 2.0 (отличия от 1.x)
 

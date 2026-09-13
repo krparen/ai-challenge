@@ -27,3 +27,11 @@ databaseChangeLog:
               ON SPRING_AI_CHAT_MEMORY(conversation_id, "timestamp");
               CREATE INDEX SPRING_AI_CHAT_MEMORY_CONVERSATION_ID_SEQUENCE_ID_IDX
               ON SPRING_AI_CHAT_MEMORY(conversation_id, sequence_id);
+  - changeSet:
+      id: 003-conversation-usage-totals
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE conversations ADD COLUMN prompt_tokens BIGINT NOT NULL DEFAULT 0;
+              ALTER TABLE conversations ADD COLUMN completion_tokens BIGINT NOT NULL DEFAULT 0;

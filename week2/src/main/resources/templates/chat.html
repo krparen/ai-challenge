@@ -14,26 +14,68 @@
 		.user { align-self: flex-end; background: #d8e8ff; }
 		.assistant { align-self: flex-start; background: #ececec; }
 		.empty { color: #888; }
+		.stats { font-size: 0.85em; color: #444; margin: 8px 0 0; }
+		.hint { font-size: 0.8em; color: #999; margin: 4px 0; }
 		input { width: 100%; box-sizing: border-box; font: inherit; }
 		button { display: block; margin-top: 8px; padding: 8px 24px; }
+		button { display: block; margin-top: 8px; padding: 8px 24px; }
+		#send-btn[disabled] { opacity: 0.7; cursor: wait; }
+		#send-btn.loading::after { content: ''; display: inline-block; width: 12px; height: 12px; margin-left: 8px; vertical-align: middle; border: 2px solid #555; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+		@keyframes spin { to { transform: rotate(360deg); } }
 		.error { background: #f8e8e8; color: #902020; padding: 10px 14px; border-radius: 8px; margin-top: 8px; }
 	</style>
 </head>
 <body>
+	<script>
+		window.addEventListener('pageshow', function (e) {
+			var btn = document.getElementById('send-btn');
+			if (e.persisted && btn) {
+				btn.disabled = false;
+				btn.classList.remove('loading');
+				btn.textContent = 'Отправить';
+			}
+			var chat = document.getElementById('chat');
+			if (chat) {
+				chat.scrollTop = chat.scrollHeight;
+			}
+		});
+		document.addEventListener('DOMContentLoaded', function () {
+			document.getElementById('chat-form').addEventListener('submit', function () {
+				var btn = document.getElementById('send-btn');
+				btn.disabled = true;
+				btn.classList.add('loading');
+				btn.textContent = 'Думаю...';
+			});
+		});
+	</script>
 	<h1>Чат с агентом (DeepSeek)</h1>
 	<p class="cid">id беседы: <code th:text="${conversationId}"></code></p>
 	<form method="post" action="/chat/new" class="newchat">
 		<button type="submit">Новый чат</button>
 	</form>
-	<div class="chat" th:if="${!messages.isEmpty()}">
+	<div class="chat" id="chat" th:if="${!messages.isEmpty()}">
 		<div th:each="m : ${messages}" th:class="${m.fromUser} ? 'msg user' : 'msg assistant'">
 			<div th:text="${m.text}"></div>
 		</div>
 	</div>
 	<p class="empty" th:if="${messages.isEmpty()}">Сообщений пока нет — напишите что-нибудь ниже.</p>
-	<form method="post" action="/chat">
+	<p class="stats">
+		История: <span th:text="${historyStats.messages}">0</span> сообщений,
+		~<span th:text="${historyStats.estimatedTokens}">0</span> токенов (BPE-оценка)
+		<span th:if="${lastPrompt != null}">
+			· последний запрос: <b th:text="${lastPrompt}">0</b>,
+			ответ: <b th:text="${lastCompletion}">0</b> токенов
+		</span>
+		<span th:if="${promptTotal != null}">
+			· всего в беседе: <b th:text="${promptTotal + completionTotal}">0</b>
+			(<span th:text="${promptTotal}">0</span> вход + <span th:text="${completionTotal}">0</span> генерация),
+			≈$<span th:text="${#numbers.formatDecimal((promptTotal * 0.22 + completionTotal * 0.66) / 1000000.0, 1, 4)}">0</span>
+		</span>
+	</p>
+	<p class="hint">Каждый ход отправляет всю историю заново — поэтому запрос растёт с каждым сообщением, а стоимость диалога копится.</p>
+	<form method="post" action="/chat" id="chat-form">
 		<input type="text" name="message" placeholder="Введите сообщение..." required autofocus>
-		<button type="submit">Отправить</button>
+		<button type="submit" id="send-btn">Отправить</button>
 	</form>
 	<div th:if="${error}" class="error" th:text="${error}"></div>
 </body>
