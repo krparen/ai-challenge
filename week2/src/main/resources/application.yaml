@@ -1,7 +1,22 @@
 spring:
   application:
     name: ai_challenge_week2
+  datasource:
+    url: jdbc:postgresql://localhost:5432/challenge_week2
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/master.yaml
   ai:
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: never
     deepseek:
       api-key: ${DEEPSEEK_API_KEY}
       chat:

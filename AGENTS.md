@@ -7,7 +7,7 @@
 - Java 25, Maven (`mvnw.cmd`), Spring Boot **4.1.1** (стартеры нового именования: `spring-boot-starter-webmvc`, `-thymeleaf`)
 - Spring AI **2.0.1** (BOM `spring-ai-bom`), стартер `spring-ai-starter-model-deepseek`
 - Thymeleaf для страниц
-- Проекты-домашки: `week1/` (дни 1–5, см. Статус) и `week2/` (день 6: чат-агент — `ChatAgent` инкапсулирует LLM, `sendMessage(conversationId, msg)` + память бесед в `Map`; `GET/POST /chat` с PRG-редиректом, история в Thymeleaf-ленте), пакет одинаков: `com.tutorial.ai_challenge`; класс приложения в week2 пользователь переименовал в `AiChallengeApplicationWeek2`
+- Проекты-домашки: `week1/` (дни 1–5, см. Статус) и `week2/` (день 6: чат-агент — `ChatAgent` инкапсулирует LLM; день 7: контекст в PostgreSQL — Spring AI `ChatMemory` на `JdbcChatMemoryRepository` (таблица `SPRING_AI_CHAT_MEMORY`), беседы-метаданные через JPA (`Conversation`), миграции Liquibase; cid в cookie `conversationId`, а не в сессии — переживает рестарт; POST /chat/new закрывает беседу: `chatMemory.clear` + `closed_at`), пакет одинаков: `com.tutorial.ai_challenge`; класс приложения в week2 пользователь переименовал в `AiChallengeApplicationWeek2`
 - Ключ в yaml week2 — через `${DEEPSEEK_API_KEY}`; в week1 пользователь вписал ключ открытым текстом (вернуть плейсхолдер до коммита!)
 
 ### Файлы week1
@@ -33,6 +33,8 @@
 
 - `ChatClient...options(...)` и `Builder.defaultOptions(...)` принимают **билдер**, а не готовый объект: `.options(DeepSeekChatOptions.builder().maxTokens(60)...)` — без `.build()`. Сигнатуры проверять `javap -classpath <jar> 'класс$Вложенный'` (в PowerShell имя с `$` — в одинарных кавычках!).
 - Включённый thinking **съедает бюджет maxTokens** — на сам ответ может не хватить.
+- Chat memory 2.0.1 (проверено javap): артефакт `spring-ai-starter-model-chat-memory-repository-jdbc`; советник — `org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor` (в `chat.client.advisor`, НЕ `chat.memory.advisor`), `builder(chatMemory)`; id беседы — advisor-параметр `ChatMemory.CONVERSATION_ID`; таблица 2.0 — `SPRING_AI_CHAT_MEMORY` (conversation_id/content/type/"timestamp"/sequence_id, без PK) — DDL брать из jar репозитория, а не из доков 1.0; `spring.ai.chat.memory.repository.jdbc.initialize-schema` — режим (`never`/`always`, НЕ boolean).
+- Spring Boot 4: автоконфигурация Liquibase вынесена в отдельный модуль **`spring-boot-liquibase`** — `liquibase-core` сам её не подтягивает, без него миграции молча не стартуют (симптом: `Schema validation: missing table` в validate-режиме JPA).
 
 ## Как я проверяю изменения (рабочий процесс)
 

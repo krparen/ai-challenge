@@ -1,14 +1,11 @@
 package com.tutorial.ai_challenge;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,36 +13,29 @@ public class ChatAgent {
 
 	private final ChatClient chatClient;
 
-	private final Map<String, List<Message>> conversations = new ConcurrentHashMap<>();
+	private final ChatMemory chatMemory;
 
-	public ChatAgent(ChatClient.Builder builder) {
-		this.chatClient = builder.build();
+	public ChatAgent(ChatClient.Builder builder, ChatMemory chatMemory) {
+		this.chatClient = builder
+				.defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+				.build();
+		this.chatMemory = chatMemory;
 	}
 
 	public String sendMessage(String conversationId, String userMessage) {
-		List<Message> history = conversations.computeIfAbsent(conversationId, id -> new ArrayList<>());
-		history.add(new UserMessage(userMessage));
-		try {
-			String reply = chatClient.prompt()
-					.messages(history)
-					.call()
-					.content();
-			history.add(new AssistantMessage(reply));
-			return reply;
-		}
-		catch (RuntimeException e) {
-			history.removeLast();
-			throw e;
-		}
+		return chatClient.prompt()
+				.user(userMessage)
+				.advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+				.call()
+				.content();
 	}
 
 	public List<Message> getMessages(String conversationId) {
-		List<Message> history = conversations.get(conversationId);
-		return history == null ? List.of() : List.copyOf(history);
+		return List.copyOf(chatMemory.get(conversationId));
 	}
 
 	public void closeConversation(String conversationId) {
-		conversations.remove(conversationId);
+		chatMemory.clear(conversationId);
 	}
 
 }
