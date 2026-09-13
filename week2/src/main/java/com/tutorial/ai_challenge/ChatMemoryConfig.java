@@ -13,10 +13,9 @@ public class ChatMemoryConfig {
 	@Bean
 	public ChatMemory chatMemory(ChatMemoryRepository repository, ConversationRepository conversations,
 			ChatClient.Builder builder,
-			@Value("${chat.compression-enabled:true}") boolean compressionEnabled,
 			@Value("${chat.recent-messages:10}") int recentMessages) {
-		ChatClient summarizer = builder.build();
-		return new SummaryChatMemory(repository, conversations, summarizer, compressionEnabled, recentMessages);
+		ChatClient llm = builder.build();
+		return new StrategyChatMemory(repository, conversations, llm, recentMessages);
 	}
 
 }

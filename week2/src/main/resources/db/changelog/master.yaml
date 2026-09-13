@@ -51,3 +51,21 @@ databaseChangeLog:
             sql: |
               ALTER TABLE conversations ADD COLUMN summary_prompt_tokens BIGINT NOT NULL DEFAULT 0;
               ALTER TABLE conversations ADD COLUMN summary_completion_tokens BIGINT NOT NULL DEFAULT 0;
+  - changeSet:
+      id: 006-conversation-branching
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE conversations ADD COLUMN branch_of uuid;
+              ALTER TABLE conversations ADD COLUMN branch_point INTEGER;
+  - changeSet:
+      id: 007-conversation-strategy-facts
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE conversations ADD COLUMN strategy VARCHAR(16) NOT NULL DEFAULT 'FULL';
+              ALTER TABLE conversations ADD COLUMN facts TEXT;
+              ALTER TABLE conversations ADD COLUMN facts_prompt_tokens BIGINT NOT NULL DEFAULT 0;
+              ALTER TABLE conversations ADD COLUMN facts_completion_tokens BIGINT NOT NULL DEFAULT 0;

@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -38,6 +40,25 @@ public class Conversation {
 
 	@Column(name = "summary_completion_tokens", nullable = false)
 	private long summaryCompletionTokens;
+
+	@Column(name = "branch_of")
+	private UUID branchOf;
+
+	@Column(name = "branch_point")
+	private Integer branchPoint;
+
+	@Column(name = "strategy", nullable = false)
+	@Enumerated(EnumType.STRING)
+	private ChatStrategy strategy = ChatStrategy.FULL;
+
+	@Column(name = "facts")
+	private String facts;
+
+	@Column(name = "facts_prompt_tokens", nullable = false)
+	private long factsPromptTokens;
+
+	@Column(name = "facts_completion_tokens", nullable = false)
+	private long factsCompletionTokens;
 
 	protected Conversation() {
 	}
@@ -99,6 +120,52 @@ public class Conversation {
 
 	public void close() {
 		this.closedAt = OffsetDateTime.now();
+	}
+
+	public void reopen() {
+		this.closedAt = null;
+	}
+
+	public void forkFrom(UUID parentId, Integer branchPoint) {
+		this.branchOf = parentId;
+		this.branchPoint = branchPoint;
+	}
+
+	public UUID getBranchOf() {
+		return branchOf;
+	}
+
+	public Integer getBranchPoint() {
+		return branchPoint;
+	}
+
+	public ChatStrategy getStrategy() {
+		return strategy;
+	}
+
+	public void setStrategy(ChatStrategy strategy) {
+		this.strategy = strategy;
+	}
+
+	public String getFacts() {
+		return facts;
+	}
+
+	public void writeFacts(String facts) {
+		this.facts = facts;
+	}
+
+	public long getFactsPromptTokens() {
+		return factsPromptTokens;
+	}
+
+	public long getFactsCompletionTokens() {
+		return factsCompletionTokens;
+	}
+
+	public void addFactsUsage(int promptTokens, int completionTokens) {
+		this.factsPromptTokens += promptTokens;
+		this.factsCompletionTokens += completionTokens;
 	}
 
 }

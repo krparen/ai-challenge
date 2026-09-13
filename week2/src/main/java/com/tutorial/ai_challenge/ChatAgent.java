@@ -1,5 +1,6 @@
 package com.tutorial.ai_challenge;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.ai.chat.client.ChatClient;
@@ -74,6 +75,12 @@ public class ChatAgent {
 
 	public void closeConversation(String conversationId) {
 		chatMemory.clear(conversationId);
+	}
+
+	public void branchConversation(String sourceId, String targetId, int checkpoint) {
+		List<Message> source = historyRepository.findByConversationId(sourceId);
+		int limit = Math.min(Math.max(checkpoint, 0), source.size());
+		historyRepository.saveAll(targetId, new ArrayList<>(source.subList(0, limit)));
 	}
 
 }

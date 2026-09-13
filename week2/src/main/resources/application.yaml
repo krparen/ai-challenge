@@ -2,7 +2,6 @@ server:
   tomcat:
     max-http-form-post-size: 100MB
 chat:
-  compression-enabled: true
   recent-messages: 2
 spring:
   application:
