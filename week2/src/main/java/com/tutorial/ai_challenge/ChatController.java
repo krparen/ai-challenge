@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -32,9 +33,13 @@ public class ChatController {
 
 	private final ConversationRepository conversations;
 
-	public ChatController(ChatAgent agent, ConversationRepository conversations) {
+	private final int recentMessages;
+
+	public ChatController(ChatAgent agent, ConversationRepository conversations,
+			@Value("${chat.recent-messages:10}") int recentMessages) {
 		this.agent = agent;
 		this.conversations = conversations;
+		this.recentMessages = recentMessages;
 	}
 
 	@GetMapping("/chat")
@@ -47,6 +52,10 @@ public class ChatController {
 		conversations.findById(UUID.fromString(id)).ifPresent(c -> {
 			model.addAttribute("promptTotal", c.getPromptTokens());
 			model.addAttribute("completionTotal", c.getCompletionTokens());
+			model.addAttribute("summaryPromptTotal", c.getSummaryPromptTokens());
+			model.addAttribute("summaryCompletionTotal", c.getSummaryCompletionTokens());
+			model.addAttribute("summaryCount", c.getSummaryMessageCount());
+			model.addAttribute("recentMessages", recentMessages);
 		});
 		return "chat";
 	}
@@ -75,6 +84,11 @@ public class ChatController {
 			});
 			redirect.addFlashAttribute("lastPrompt", reply.promptTokens());
 			redirect.addFlashAttribute("lastCompletion", reply.completionTokens());
+			String promptText = agent.lastPrompt();
+			if (promptText != null) {
+				redirect.addFlashAttribute("lastPromptText", promptText);
+			}
+			agent.clearLastPrompt();
 		}
 		catch (RuntimeException e) {
 			redirect.addFlashAttribute("error", e.getMessage());

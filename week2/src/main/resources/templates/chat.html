@@ -16,8 +16,10 @@
 		.empty { color: #888; }
 		.stats { font-size: 0.85em; color: #444; margin: 8px 0 0; }
 		.hint { font-size: 0.8em; color: #999; margin: 4px 0; }
-		input { width: 100%; box-sizing: border-box; font: inherit; }
-		button { display: block; margin-top: 8px; padding: 8px 24px; }
+		.promptbox { margin: 8px 0; font-size: 0.85em; }
+		.promptbox summary { cursor: pointer; color: #555; }
+		.promptbox pre { white-space: pre-wrap; word-break: break-word; background: #f4f4f4; border: 1px solid #ddd; border-radius: 6px; padding: 10px; max-height: 320px; overflow-y: auto; font-size: 0.9em; }
+		<input { width: 100%; box-sizing: border-box; font: inherit; }
 		button { display: block; margin-top: 8px; padding: 8px 24px; }
 		#send-btn[disabled] { opacity: 0.7; cursor: wait; }
 		#send-btn.loading::after { content: ''; display: inline-block; width: 12px; height: 12px; margin-left: 8px; vertical-align: middle; border: 2px solid #555; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -68,11 +70,22 @@
 		</span>
 		<span th:if="${promptTotal != null}">
 			· всего в беседе: <b th:text="${promptTotal + completionTotal}">0</b>
-			(<span th:text="${promptTotal}">0</span> вход + <span th:text="${completionTotal}">0</span> генерация),
-			≈$<span th:text="${#numbers.formatDecimal((promptTotal * 0.22 + completionTotal * 0.66) / 1000000.0, 1, 4)}">0</span>
+			(<span th:text="${promptTotal}">0</span> вход + <span th:text="${completionTotal}">0</span> генерация)
+			<span th:if="${summaryPromptTotal > 0 or summaryCompletionTotal > 0}">
+				+ суммаризация <span th:text="${summaryPromptTotal}">0</span>+<span th:text="${summaryCompletionTotal}">0</span>
+			</span>
+			, ≈$<span th:text="${#numbers.formatDecimal(((promptTotal + summaryPromptTotal) * 0.22 + (completionTotal + summaryCompletionTotal) * 0.66) / 1000000.0, 1, 4)}">0</span>
+		</span>
+		<span th:if="${summaryCount != null and summaryCount > 0}">
+			· в промпте: сводка за <span th:text="${summaryCount}">0</span> сообщ. + последние
+			<span th:text="${recentMessages}">10</span>
 		</span>
 	</p>
-	<p class="hint">Каждый ход отправляет всю историю заново — поэтому запрос растёт с каждым сообщением, а стоимость диалога копится.</p>
+	<p class="hint">Каждый ход отправляет контекст заново: без сжатия — всю историю целиком, со сжатием — сводку и последние сообщения.</p>
+	<details class="promptbox" th:if="${lastPromptText}">
+		<summary>Последний промпт, ушедший в DeepSeek</summary>
+		<pre th:text="${lastPromptText}"></pre>
+	</details>
 	<form method="post" action="/chat" id="chat-form">
 		<input type="text" name="message" placeholder="Введите сообщение..." required autofocus>
 		<button type="submit" id="send-btn">Отправить</button>

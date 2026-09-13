@@ -35,3 +35,19 @@ databaseChangeLog:
             sql: |
               ALTER TABLE conversations ADD COLUMN prompt_tokens BIGINT NOT NULL DEFAULT 0;
               ALTER TABLE conversations ADD COLUMN completion_tokens BIGINT NOT NULL DEFAULT 0;
+  - changeSet:
+      id: 004-conversation-summary
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE conversations ADD COLUMN summary TEXT;
+              ALTER TABLE conversations ADD COLUMN summary_message_count INTEGER NOT NULL DEFAULT 0;
+  - changeSet:
+      id: 005-conversation-summary-usage
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE conversations ADD COLUMN summary_prompt_tokens BIGINT NOT NULL DEFAULT 0;
+              ALTER TABLE conversations ADD COLUMN summary_completion_tokens BIGINT NOT NULL DEFAULT 0;

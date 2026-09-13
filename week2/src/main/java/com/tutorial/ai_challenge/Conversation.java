@@ -27,6 +27,18 @@ public class Conversation {
 	@Column(name = "completion_tokens", nullable = false)
 	private long completionTokens;
 
+	@Column(name = "summary")
+	private String summary;
+
+	@Column(name = "summary_message_count", nullable = false)
+	private int summaryMessageCount;
+
+	@Column(name = "summary_prompt_tokens", nullable = false)
+	private long summaryPromptTokens;
+
+	@Column(name = "summary_completion_tokens", nullable = false)
+	private long summaryCompletionTokens;
+
 	protected Conversation() {
 	}
 
@@ -57,6 +69,32 @@ public class Conversation {
 	public void addUsage(int promptTokens, int completionTokens) {
 		this.promptTokens += promptTokens;
 		this.completionTokens += completionTokens;
+	}
+
+	public long getSummaryPromptTokens() {
+		return summaryPromptTokens;
+	}
+
+	public long getSummaryCompletionTokens() {
+		return summaryCompletionTokens;
+	}
+
+	public void addSummaryUsage(int promptTokens, int completionTokens) {
+		this.summaryPromptTokens += promptTokens;
+		this.summaryCompletionTokens += completionTokens;
+	}
+
+	public String getSummary() {
+		return summary;
+	}
+
+	public int getSummaryMessageCount() {
+		return summaryMessageCount;
+	}
+
+	public void writeSummary(String summary, int coveredMessageCount) {
+		this.summary = summary;
+		this.summaryMessageCount = coveredMessageCount;
 	}
 
 	public void close() {
