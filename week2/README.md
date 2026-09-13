@@ -46,3 +46,14 @@ login=postgres, password=postgres
 6. После числа вопросов-ответов, соответствующих настройке chat.recent-messages, будет происходить суммаризация.
 Расход токенов на суммаризацию будет обращаться в общем счётчике токенов, итоговый промпт с суммаризацией
 части диалога можно посмотреть в выпадашке "Последний промпт, ушедший в DeepSeek".
+
+## Задание 5
+
+Как проверить:
+
+1. Открыть коммит 8b42877f12fd2c967cd4f6f2b927c0f63bba80d5
+2. Подготовить бд postgres для запуска - по дефолту стоят настройки на url=localhost:5432, db_name=challenge_week2,
+   login=postgres, password=postgres
+3. Запустить приложение week2/src/main/java/com/tutorial/ai_challenge/AiChallengeApplicationWeek2.java
+4. Перейти на http://localhost:8080/chat
+5. Початиться в различных режимах истории чата.
