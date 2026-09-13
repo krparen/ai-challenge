@@ -19,3 +19,16 @@ login=postgres, password=postgres
 3. Запустить приложение week2/src/main/java/com/tutorial/ai_challenge/AiChallengeApplicationWeek2.java
 4. Перейти на http://localhost:8080/chat
 5. Напечатать что-то в поле ввода и нажать "отправить", дождаться ответа.
+
+## Задание 3
+
+Как проверить:
+
+1. Открыть коммит d205c095e6dce62c927e21f1151c6d55ef7e5bbb
+2. Подготовить бд postgres для запуска - по дефолту стоят настройки на url=localhost:5432, db_name=challenge_week2,
+   login=postgres, password=postgres
+3. Запустить приложение week2/src/main/java/com/tutorial/ai_challenge/AiChallengeApplicationWeek2.java
+4. Перейти на http://localhost:8080/chat
+5. Початиться, увидеть, что счётчик токенов внизу чата увеличивается.
+6. Если хочется посмотреть, как переполнится контекст модели - скопировать текст из файла over_limit_request,
+вставить в поле ввода, отправить. Под чатом появится ошибка.
