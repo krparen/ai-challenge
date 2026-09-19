@@ -1,0 +1,29 @@
+server:
+  tomcat:
+    max-http-form-post-size: 100MB
+spring:
+  application:
+    name: ai_challenge_week3
+  datasource:
+    url: jdbc:postgresql://localhost:5432/challenge_week3
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/master.yaml
+  ai:
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: never
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY}
+      chat:
+        options:
+          model: deepseek-v4-flash
+          thinking:
+            type: disabled
