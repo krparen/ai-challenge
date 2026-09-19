@@ -1,1 +1,91 @@
 databaseChangeLog:
+  - changeSet:
+      id: 001-create-profiles
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE profiles (
+                  id uuid PRIMARY KEY,
+                  name VARCHAR(64) NOT NULL,
+                  style TEXT,
+                  format TEXT,
+                  restrictions TEXT,
+                  created_at timestamptz NOT NULL DEFAULT now()
+              );
+  - changeSet:
+      id: 002-create-working-tasks
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE working_tasks (
+                  id uuid PRIMARY KEY,
+                  profile_id uuid NOT NULL REFERENCES profiles(id),
+                  title VARCHAR(128) NOT NULL,
+                  state TEXT,
+                  status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
+                  created_at timestamptz NOT NULL DEFAULT now(),
+                  updated_at timestamptz NOT NULL DEFAULT now()
+              );
+  - changeSet:
+      id: 003-create-agent-memory
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE agent_memory (
+                  id uuid PRIMARY KEY,
+                  profile_id uuid NOT NULL REFERENCES profiles(id),
+                  fact_key VARCHAR(128) NOT NULL,
+                  fact_value TEXT NOT NULL,
+                  status VARCHAR(16) NOT NULL DEFAULT 'PENDING',
+                  created_at timestamptz NOT NULL DEFAULT now(),
+                  decided_at timestamptz
+              );
+  - changeSet:
+      id: 004-create-conversations
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE conversations (
+                  id uuid PRIMARY KEY,
+                  profile_id uuid REFERENCES profiles(id),
+                  created_at timestamptz NOT NULL DEFAULT now(),
+                  closed_at timestamptz,
+                  prompt_tokens BIGINT NOT NULL DEFAULT 0,
+                  completion_tokens BIGINT NOT NULL DEFAULT 0,
+                  extraction_prompt_tokens BIGINT NOT NULL DEFAULT 0,
+                  extraction_completion_tokens BIGINT NOT NULL DEFAULT 0
+              );
+  - changeSet:
+      id: 005-create-spring-ai-chat-memory
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE SPRING_AI_CHAT_MEMORY (
+                  conversation_id VARCHAR(36) NOT NULL,
+                  content TEXT NOT NULL,
+                  type VARCHAR(10) NOT NULL CHECK (type IN ('USER', 'ASSISTANT', 'SYSTEM', 'TOOL')),
+                  "timestamp" TIMESTAMP NOT NULL,
+                  sequence_id BIGINT NOT NULL
+              );
+              CREATE INDEX SPRING_AI_CHAT_MEMORY_CONVERSATION_ID_TIMESTAMP_IDX
+              ON SPRING_AI_CHAT_MEMORY(conversation_id, "timestamp");
+              CREATE INDEX SPRING_AI_CHAT_MEMORY_CONVERSATION_ID_SEQUENCE_ID_IDX
+              ON SPRING_AI_CHAT_MEMORY(conversation_id, sequence_id);
+  - changeSet:
+      id: 006-create-profile-attributes
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE profile_attributes (
+                  id uuid PRIMARY KEY,
+                  profile_id uuid NOT NULL REFERENCES profiles(id),
+                  attr_key VARCHAR(128) NOT NULL,
+                  attr_value TEXT NOT NULL,
+                  created_at timestamptz NOT NULL DEFAULT now()
+              );

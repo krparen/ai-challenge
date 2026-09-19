@@ -1,6 +1,10 @@
 server:
   tomcat:
     max-http-form-post-size: 100MB
+memory:
+  short-term:
+    window: 10
+  extraction-enabled: true
 spring:
   application:
     name: ai_challenge_week3

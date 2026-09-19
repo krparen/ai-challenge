@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<title>AI Challenge — Week 3: агент со слоями памяти</title>
+	<style>
+		body { font-family: sans-serif; max-width: 860px; margin: 32px auto; padding: 0 16px; color: #222; }
+		h1 { font-size: 1.25em; }
+		.cid { color: #888; font-size: 0.85em; margin: 4px 0; }
+		details.layer { border: 1px solid #ddd; border-radius: 8px; padding: 6px 12px; margin: 8px 0; font-size: 0.9em; }
+		details.layer summary { cursor: pointer; color: #555; font-weight: 600; }
+		details.layer form { display: inline-block; margin: 4px 4px 0 0; }
+		details.layer input[type=text], details.layer textarea { font: inherit; margin: 2px 0; }
+		details.layer input[type=text] { width: 260px; }
+		details.layer button { display: inline-block; margin: 2px 0; padding: 3px 12px; font-size: 0.9em; }
+		details.layer table { border-collapse: collapse; width: 100%; margin-top: 6px; }
+		details.layer th, details.layer td { border: 1px solid #ddd; padding: 3px 8px; text-align: left; vertical-align: top; }
+		details.layer pre { white-space: pre-wrap; word-break: break-word; background: #f6f6f6; border: 1px solid #e2e2e2; border-radius: 6px; padding: 8px; margin: 6px 0; }
+		.memlist div { margin: 2px 0; }
+		.tag { display: inline-block; font-size: 0.75em; padding: 1px 6px; border-radius: 8px; background: #e8e8e8; color: #555; margin-right: 6px; }
+		.chat { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; padding: 8px; background: #fafafa; border: 1px solid #ddd; border-radius: 8px; }
+		.msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; }
+		.user { align-self: flex-end; background: #d8e8ff; }
+		.assistant { align-self: flex-start; background: #ececec; }
+		.empty { color: #888; }
+		.stats { font-size: 0.85em; color: #444; margin: 8px 0 0; }
+		.hint { font-size: 0.8em; color: #999; margin: 4px 0; }
+		.promptbox { margin: 8px 0; font-size: 0.85em; }
+		.promptbox summary { cursor: pointer; color: #555; }
+		.promptbox pre { white-space: pre-wrap; word-break: break-word; background: #f4f4f4; border: 1px solid #ddd; border-radius: 6px; padding: 10px; max-height: 320px; overflow-y: auto; font-size: 0.9em; }
+		input[type=text], textarea { width: 100%; box-sizing: border-box; font: inherit; }
+		.chatform textarea { resize: none; overflow-y: hidden; max-height: 220px; padding: 8px 10px; }
+		.statebox { resize: vertical; height: 480px; padding: 8px 10px; }
+		details.layer form.taskstate { display: block; }
+		.chatform button { display: block; margin-top: 8px; padding: 8px 24px; }
+		#send-btn[disabled] { opacity: 0.7; cursor: wait; }
+		#send-btn.loading::after { content: ''; display: inline-block; width: 12px; height: 12px; margin-left: 8px; vertical-align: middle; border: 2px solid #555; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+		@keyframes spin { to { transform: rotate(360deg); } }
+		.error { background: #f8e8e8; color: #902020; padding: 10px 14px; border-radius: 8px; margin-top: 8px; }
+	</style>
+</head>
+<body>
+	<script>
+		window.addEventListener('pageshow', function (e) {
+			var btn = document.getElementById('send-btn');
+			if (e.persisted && btn) {
+				btn.disabled = false;
+				btn.classList.remove('loading');
+				btn.textContent = 'Отправить';
+			}
+			var chat = document.getElementById('chat');
+			if (chat) {
+				chat.scrollTop = chat.scrollHeight;
+			}
+		});
+		document.addEventListener('DOMContentLoaded', function () {
+			var form = document.getElementById('chat-form');
+			var input = document.getElementById('msg-input');
+			form.addEventListener('submit', function () {
+				var btn = document.getElementById('send-btn');
+				btn.disabled = true;
+				btn.classList.add('loading');
+				btn.textContent = 'Думаю...';
+			});
+			input.addEventListener('keydown', function (e) {
+				if (e.key === 'Enter' && !e.shiftKey) {
+					e.preventDefault();
+					if (input.value.trim() !== '') {
+						form.requestSubmit();
+					}
+				}
+			});
+			function grow() {
+				input.style.height = 'auto';
+				input.style.height = Math.min(input.scrollHeight, 220) + 'px';
+			}
+			input.addEventListener('input', grow);
+			grow();
+		});
+	</script>
+	<h1>Чат с агентом (слои памяти)</h1>
+	<p class="cid">беседа: <code th:text="${conversationId}"></code> · профиль: <b th:text="${profile.name}"></b></p>
+
+	<details class="layer" open>
+		<summary>Профиль пользователя (стиль / формат / ограничения)</summary>
+		<form method="post" action="/profile/switch">
+			<select name="profileId" onchange="this.form.submit()">
+				<option th:each="p : ${profiles}" th:value="${p.id}" th:text="${p.name}"
+						th:selected="${p.id.toString() == profile.id.toString()}"></option>
+			</select>
+			<noscript><button type="submit">переключить</button></noscript>
+		</form>
+		<form method="post" action="/profile/new">
+			<input type="text" name="name" placeholder="имя нового профиля" required>
+			<button type="submit">создать профиль</button>
+		</form>
+		<form method="post" action="/profile/prefs">
+			<table>
+				<tr><th>стиль</th><td><input type="text" name="style" th:value="${profile.style}" placeholder="например: коротко, без канцелярита"></td></tr>
+				<tr><th>формат</th><td><input type="text" name="format" th:value="${profile.format}" placeholder="например: таблицы и списки"></td></tr>
+				<tr><th>ограничения</th><td><input type="text" name="restrictions" th:value="${profile.restrictions}" placeholder="например: без эмодзи, не длиннее 5 строк"></td></tr>
+			</table>
+			<button type="submit">сохранить предпочтения</button>
+		</form>
+		<div class="memlist">
+			<p style="margin: 6px 0 2px;">Данные профиля (попадают в каждый запрос без подтверждения):</p>
+			<div th:each="a : ${profileAttrs}">
+				<span class="tag">профиль</span>
+				<b th:text="${a.attrKey}"></b>: <span th:text="${a.attrValue}"></span>
+				<form method="post" action="/profile/attr/delete">
+					<input type="hidden" name="attrId" th:value="${a.id}">
+					<button type="submit" title="удалить из профиля">✕</button>
+				</form>
+			</div>
+			<p th:if="${profileAttrs.isEmpty()}">Пока пусто.</p>
+		</div>
+		<form method="post" action="/profile/attr/add">
+			<input type="text" name="attrKey" placeholder="ключ" required>
+			<input type="text" name="attrValue" placeholder="значение" required>
+			<button type="submit">добавить в профиль</button>
+		</form>
+	</details>
+
+	<details class="layer" open>
+		<summary>Рабочая память — текущая задача</summary>
+		<div th:if="${activeTask != null}">
+			<span class="tag" th:text="${activeTask.status}"></span>
+			<b th:text="${activeTask.title}"></b>
+			<form method="post" action="/task/deactivate">
+				<input type="hidden" name="taskId" th:value="${activeTask.id}">
+				<button type="submit" title="задача останется в списке, но активной её не будет">снять активность</button>
+			</form>
+			<form method="post" action="/task/state" class="taskstate">
+				<input type="hidden" name="taskId" th:value="${activeTask.id}">
+				<textarea class="statebox" name="state" placeholder="Состояние задачи: строки «ключ: значение» (обновляется и автоматически после каждого хода)"><th:block th:if="${activeTask.state != null}" th:text="${activeTask.state}"></th:block></textarea>
+				<button type="submit">сохранить состояние</button>
+			</form>
+		</div>
+		<p th:if="${activeTask == null}">Активной задачи нет.</p>
+		<form method="post" action="/task/new">
+			<input type="text" name="title" placeholder="название новой задачи" required>
+			<button type="submit">новая задача</button>
+		</form>
+		<form method="post" action="/task/switch" th:if="${!tasks.isEmpty()}">
+			<select name="taskId">
+				<option th:each="t : ${tasks}" th:value="${t.id}"
+						th:text="${t.title + ' — ' + t.status}"
+						th:selected="${activeTask != null and t.id.toString() == activeTask.id.toString()}"></option>
+			</select>
+			<button type="submit">выбрать активной</button>
+		</form>
+		<table th:if="${!tasks.isEmpty()}">
+			<tr><th>задача</th><th>профиль</th><th>статус</th><th></th></tr>
+			<tr th:each="t : ${tasks}">
+				<td th:text="${t.title}"></td>
+				<td th:text="${profileNames[t.profileId]}"></td>
+				<td th:text="${t.status}"></td>
+				<td>
+					<form th:if="${t.status.name() != 'DONE'}" method="post" action="/task/close">
+						<input type="hidden" name="taskId" th:value="${t.id}">
+						<button type="submit">закрыть</button>
+					</form>
+				</td>
+			</tr>
+		</table>
+	</details>
+
+	<details class="layer" open>
+		<summary>Память агента (долговременная, с подтверждением)</summary>
+		<div class="memlist">
+			<div th:each="m : ${confirmedMemory}">
+				<span class="tag">подтверждено</span>
+				<b th:text="${m.factKey}"></b>: <span th:text="${m.factValue}"></span>
+				<form method="post" action="/memory/delete">
+					<input type="hidden" name="memoryId" th:value="${m.id}">
+					<button type="submit" title="удалить из памяти">✕</button>
+				</form>
+			</div>
+			<p th:if="${confirmedMemory.isEmpty()}">Пока пусто — память агента заполняется только вручную.</p>
+		</div>
+		<form method="post" action="/memory/add">
+			<input type="text" name="factKey" placeholder="ключ" required>
+			<input type="text" name="factValue" placeholder="значение" required>
+			<button type="submit">добавить вручную</button>
+		</form>
+	</details>
+
+	<details class="layer">
+		<summary>Краткосрочная память (текущий диалог)</summary>
+		История: <span th:text="${historyStats.messages}">0</span> сообщений,
+		~<span th:text="${historyStats.estimatedTokens}">0</span> токенов (BPE-оценка).
+		В промпт идут последние <b th:text="${window}">10</b> сообщений (настройка <code>memory.short-term.window</code>).
+		<a href="#" onclick="location='/chat/new'">новый диалог</a> — короткая память очищается.
+	</details>
+
+	<form method="post" action="/chat/new">
+		<button type="submit">Новый чат (профиль и задачи остаются)</button>
+	</form>
+
+	<div class="chat" id="chat" th:if="${!messages.isEmpty()}">
+		<div th:each="m : ${messages}" th:class="${m.fromUser} ? 'msg user' : 'msg assistant'">
+			<div th:text="${m.text}"></div>
+		</div>
+	</div>
+	<p class="empty" th:if="${messages.isEmpty()}">Сообщений пока нет — напишите что-нибудь ниже.</p>
+	<p class="stats">
+		последний запрос: <b th:text="${lastPrompt}">—</b>, ответ: <b th:text="${lastCompletion}">—</b> токенов
+		· всего в беседе: <b th:text="${promptTotal + completionTotal}">0</b>
+		(<span th:text="${promptTotal}">0</span> вход + <span th:text="${completionTotal}">0</span> генерация)
+		+ извлечение <span th:text="${extractionPromptTotal}">0</span>+<span th:text="${extractionCompletionTotal}">0</span>
+		, ≈$<span th:text="${#numbers.formatDecimal(((promptTotal + extractionPromptTotal) * 0.22 + (completionTotal + extractionCompletionTotal) * 0.66) / 1000000.0, 1, 4)}">0</span>
+	</p>
+	<p class="hint">Слои: профиль и подтверждённая память агента + активная задача уходят в каждый запрос System-сообщениями, краткосрочная — окном последних сообщений. После каждого хода извлекатель обновляет задачу и предлагает факты в долговременную (появятся со статусом «ждёт подтверждения»).</p>
+	<details class="promptbox" th:if="${lastPromptText}">
+		<summary>Последний промпт, ушедший в DeepSeek</summary>
+		<pre th:text="${lastPromptText}"></pre>
+	</details>
+	<form method="post" action="/chat" id="chat-form" class="chatform">
+		<textarea name="message" id="msg-input" rows="1" required autofocus
+				placeholder="Введите сообщение... (Enter — отправить, Shift+Enter — перенос строки)"></textarea>
+		<button type="submit" id="send-btn">Отправить</button>
+	</form>
+	<div th:if="${error}" class="error" th:text="${error}"></div>
+</body>
+</html>
