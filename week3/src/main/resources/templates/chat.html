@@ -125,16 +125,39 @@
 		<summary>Рабочая память — текущая задача</summary>
 		<div th:if="${activeTask != null}">
 			<span class="tag" th:text="${activeTask.status}"></span>
+			<span class="tag" th:text="${activeTask.stage} + ' — ' + ${activeTask.stage.label}"></span>
 			<b th:text="${activeTask.title}"></b>
+			<p style="margin: 6px 0 2px;">Текущий шаг: <span th:text="${activeTask.currentStep != null} ? ${activeTask.currentStep} : '—'"></span></p>
+			<p style="margin: 4px 0 2px;">Ожидаемое действие: <span th:text="${activeTask.expectedAction != null} ? ${activeTask.expectedAction} : '—'"></span></p>
 			<form method="post" action="/task/deactivate">
 				<input type="hidden" name="taskId" th:value="${activeTask.id}">
-				<button type="submit" title="задача останется в списке, но активной её не будет">снять активность</button>
+				<button type="submit" title="задача останется в списке, но активной её не будет">⏸ пауза (снять активность)</button>
+			</form>
+			<form method="post" action="/task/stage" th:if="${!stageTargets.isEmpty()}">
+				<input type="hidden" name="taskId" th:value="${activeTask.id}">
+				<select name="stage">
+					<option th:each="s : ${stageTargets}" th:value="${s.name()}" th:text="${s.name() + ' — ' + s.label}"></option>
+				</select>
+				<button type="submit">перейти на этап</button>
 			</form>
 			<form method="post" action="/task/state" class="taskstate">
 				<input type="hidden" name="taskId" th:value="${activeTask.id}">
-				<textarea class="statebox" name="state" placeholder="Состояние задачи: строки «ключ: значение» (обновляется и автоматически после каждого хода)"><th:block th:if="${activeTask.state != null}" th:text="${activeTask.state}"></th:block></textarea>
-				<button type="submit">сохранить состояние</button>
+				<textarea class="statebox" name="state" placeholder="Заметки по задаче (обновляются и автоматически после каждого хода)"><th:block th:if="${activeTask.state != null}" th:text="${activeTask.state}"></th:block></textarea>
+				<button type="submit">сохранить заметки</button>
 			</form>
+			<div th:if="${!taskHistory.isEmpty()}">
+				<p style="margin: 8px 0 2px;"><b>История этапов (последние 10):</b></p>
+				<table>
+					<tr><th>когда</th><th>переход</th><th>инициатор</th><th>итог</th><th>комментарий</th></tr>
+					<tr th:each="h : ${taskHistory}">
+						<td th:text="${#strings.substring(h.createdAt.toString(), 0, 19)}"></td>
+						<td><span th:text="${h.fromStage}"></span> → <span th:text="${h.toStage}"></span></td>
+						<td th:text="${h.driver}"></td>
+						<td th:text="${h.accepted} ? 'принят' : 'ОТКЛОНЁН FSM'"></td>
+						<td th:text="${h.note}"></td>
+					</tr>
+				</table>
+			</div>
 		</div>
 		<p th:if="${activeTask == null}">Активной задачи нет.</p>
 		<form method="post" action="/task/new">
@@ -150,9 +173,10 @@
 			<button type="submit">выбрать активной</button>
 		</form>
 		<table th:if="${!tasks.isEmpty()}">
-			<tr><th>задача</th><th>профиль</th><th>статус</th><th></th></tr>
+			<tr><th>задача</th><th>этап</th><th>профиль</th><th>статус</th><th></th></tr>
 			<tr th:each="t : ${tasks}">
 				<td th:text="${t.title}"></td>
+				<td th:text="${t.stage}"></td>
 				<td th:text="${profileNames[t.profileId]}"></td>
 				<td th:text="${t.status}"></td>
 				<td>

@@ -76,6 +76,10 @@ public class ChatController {
 		model.addAttribute("tasks", memory.allTasks());
 		model.addAttribute("profileNames",
 				profiles.findAll().stream().collect(Collectors.toMap(Profile::getId, Profile::getName)));
+		model.addAttribute("stageTargets", memory.legalTargets(memory.activeTask()));
+		model.addAttribute("taskHistory", memory.activeTask() == null
+				? List.of()
+				: memory.recentHistory(memory.activeTask().getId()));
 		model.addAttribute("confirmedMemory", memory.confirmedMemory(profile.getId()));
 		model.addAttribute("profileAttrs", memory.profileAttributes(profile.getId()));
 		model.addAttribute("messages", toViews(agent.getMessages(conversation.getId().toString())));
@@ -250,6 +254,30 @@ public class ChatController {
 		if (task != null) {
 			task.writeState(state);
 			tasks.save(task);
+		}
+		return "redirect:/chat";
+	}
+
+	@PostMapping("/task/stage")
+	public String changeStage(@RequestParam String taskId, @RequestParam String stage,
+			@CookieValue(name = PROFILE_COOKIE, required = false) String profileId,
+			RedirectAttributes redirect) {
+		WorkingTask task = findTask(taskId);
+		TaskStage target = null;
+		try {
+			target = TaskStage.valueOf(stage.toUpperCase());
+		}
+		catch (IllegalArgumentException e) {
+			redirect.addFlashAttribute("error", "Неизвестный этап: " + stage);
+			return "redirect:/chat";
+		}
+		if (task == null) {
+			redirect.addFlashAttribute("error", "Задача не найдена");
+			return "redirect:/chat";
+		}
+		String error = memory.applyTransition(task, target, "MANUAL", "ручной переход из UI");
+		if (error != null) {
+			redirect.addFlashAttribute("error", error);
 		}
 		return "redirect:/chat";
 	}

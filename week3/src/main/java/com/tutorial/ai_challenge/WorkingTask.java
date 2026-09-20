@@ -30,6 +30,16 @@ public class WorkingTask {
 	@Enumerated(EnumType.STRING)
 	private TaskStatus status = TaskStatus.ACTIVE;
 
+	@Column(name = "stage", nullable = false)
+	@Enumerated(EnumType.STRING)
+	private TaskStage stage = TaskStage.PLANNING;
+
+	@Column(name = "current_step")
+	private String currentStep;
+
+	@Column(name = "expected_action")
+	private String expectedAction;
+
 	@Column(name = "created_at", nullable = false, insertable = false, updatable = false)
 	private OffsetDateTime createdAt;
 
@@ -63,6 +73,31 @@ public class WorkingTask {
 
 	public TaskStatus getStatus() {
 		return status;
+	}
+
+	public TaskStage getStage() {
+		return stage;
+	}
+
+	public void setStage(TaskStage stage) {
+		this.stage = stage;
+		this.updatedAt = OffsetDateTime.now();
+	}
+
+	public String getCurrentStep() {
+		return currentStep;
+	}
+
+	public void setCurrentStep(String currentStep) {
+		this.currentStep = currentStep == null || currentStep.isBlank() ? null : currentStep.strip();
+	}
+
+	public String getExpectedAction() {
+		return expectedAction;
+	}
+
+	public void setExpectedAction(String expectedAction) {
+		this.expectedAction = expectedAction == null || expectedAction.isBlank() ? null : expectedAction.strip();
 	}
 
 	public void writeState(String state) {

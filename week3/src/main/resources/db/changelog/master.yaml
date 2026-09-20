@@ -89,3 +89,29 @@ databaseChangeLog:
                   attr_value TEXT NOT NULL,
                   created_at timestamptz NOT NULL DEFAULT now()
               );
+  - changeSet:
+      id: 007-task-fsm-columns
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE working_tasks ADD COLUMN stage VARCHAR(16) NOT NULL DEFAULT 'PLANNING';
+              ALTER TABLE working_tasks ADD COLUMN current_step TEXT;
+              ALTER TABLE working_tasks ADD COLUMN expected_action TEXT;
+  - changeSet:
+      id: 008-create-task-state-history
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE task_state_history (
+                  id uuid PRIMARY KEY,
+                  task_id uuid NOT NULL REFERENCES working_tasks(id),
+                  from_stage VARCHAR(16) NOT NULL,
+                  to_stage VARCHAR(16) NOT NULL,
+                  driver VARCHAR(16) NOT NULL,
+                  accepted BOOLEAN NOT NULL,
+                  note TEXT,
+                  created_at timestamptz NOT NULL DEFAULT now()
+              );
+              CREATE INDEX task_state_history_task_id_idx ON task_state_history(task_id, created_at);

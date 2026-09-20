@@ -17,12 +17,18 @@ import org.springframework.stereotype.Service;
 public class MemoryService {
 
 	private static final String EXTRACT_SYSTEM = """
-			Ты обновляешь рабочую память диалогового ассистента по текущему ходу диалога.
-			Верни ответ строго в формате:
-			TASK
-			<обновлённое ПОЛНОЕ состояние текущей задачи: строки «ключ: значение»>""";
+			Ты ведёшь рабочую память диалогового ассистента: задача движется по этапам конечного автомата
+			PLANNING (планирование) → EXECUTION (реализация) → VALIDATION (проверка) → DONE (завершена);
+			разрешены откаты VALIDATION → EXECUTION и EXECUTION → PLANNING.
+			По текущему ходу диалога верни ответ строго в формате:
+			STAGE: <новый этап задачи: PLANNING | EXECUTION | VALIDATION | DONE>
+			STEP: <текущий шаг: что именно делается сейчас, одной фразой>
+			ACTION: <ожидаемое действие: что должно произойти дальше, одной фразой>
+			NOTES
+			<остальные детали и договорённости по задаче: строки «ключ: значение»>""";
 
-	private record ExtractResult(String taskState, int promptTokens, int completionTokens) {
+	private record ExtractResult(TaskStage stage, String step, String action, String notes,
+			int promptTokens, int completionTokens) {
 	}
 
 	private final ChatMemoryRepository shortTermRepository;
@@ -37,6 +43,8 @@ public class MemoryService {
 
 	private final ProfileAttributeRepository attributes;
 
+	private final TaskStateHistoryRepository stageHistory;
+
 	private final ChatClient extractor;
 
 	private final int window;
@@ -45,7 +53,8 @@ public class MemoryService {
 
 	public MemoryService(ChatMemoryRepository shortTermRepository, ConversationRepository conversations,
 			ProfileRepository profiles, WorkingTaskRepository tasks, AgentMemoryRepository memories,
-			ProfileAttributeRepository attributes, ChatClient.Builder builder,
+			ProfileAttributeRepository attributes, TaskStateHistoryRepository stageHistory,
+			ChatClient.Builder builder,
 			@Value("${memory.short-term.window:10}") int window,
 			@Value("${memory.extraction-enabled:true}") boolean extractionEnabled) {
 		this.shortTermRepository = shortTermRepository;
@@ -54,6 +63,7 @@ public class MemoryService {
 		this.tasks = tasks;
 		this.memories = memories;
 		this.attributes = attributes;
+		this.stageHistory = stageHistory;
 		this.extractor = builder.build();
 		this.window = window;
 		this.extractionEnabled = extractionEnabled;
@@ -159,10 +169,17 @@ public class MemoryService {
 		}
 		else {
 			sb.append("Задача: ").append(task.getTitle()).append("\n");
-			sb.append("Состояние задачи:\n");
-			sb.append(task.getState() == null || task.getState().isBlank() ? "(пока пусто)" : task.getState());
+			sb.append("Этап: ").append(task.getStage()).append(" (").append(task.getStage().getLabel()).append(")\n");
+			sb.append("Текущий шаг: ").append(orEmpty(task.getCurrentStep(), "(не определён)")).append("\n");
+			sb.append("Ожидаемое действие: ").append(orEmpty(task.getExpectedAction(), "(не определено)")).append("\n");
+			sb.append("Заметки:\n");
+			sb.append(task.getState() == null || task.getState().isBlank() ? "(пусто)" : task.getState());
 		}
 		prompt.add(new SystemMessage(sb.toString()));
+	}
+
+	private String orEmpty(String value, String fallback) {
+		return value == null || value.isBlank() ? fallback : value;
 	}
 
 	// ---------- слой 2: рабочая память (текущая задача, общий пул для всех профилей) ----------
@@ -210,8 +227,15 @@ public class MemoryService {
 		}
 		WorkingTask task = activeTask();
 		ExtractResult result = extract(task, added);
-		if (task != null && result.taskState() != null && !result.taskState().isBlank()) {
-			task.writeState(result.taskState());
+		if (task != null) {
+			if (result.stage() != null && result.stage() != task.getStage()) {
+				applyTransition(task, result.stage(), "LLM", "предложено извлекателем по ходу диалога");
+			}
+			task.setCurrentStep(result.step());
+			task.setExpectedAction(result.action());
+			if (result.notes() != null && !result.notes().isBlank()) {
+				task.writeState(result.notes().strip());
+			}
 			tasks.save(task);
 		}
 		conversations.findById(conversation.getId()).ifPresent(c -> {
@@ -220,15 +244,50 @@ public class MemoryService {
 		});
 	}
 
+	/**
+	 * Переводит задачу на новый этап через валидацию конечным автоматом.
+	 *
+	 * @return null при успехе, иначе сообщение об ошибке (переход отклонён и залогирован)
+	 */
+	public String applyTransition(WorkingTask task, TaskStage target, String driver, String note) {
+		boolean legal = task.getStage().canTransitionTo(target);
+		stageHistory.save(new TaskStateHistory(UUID.randomUUID(), task.getId(),
+				task.getStage(), target, driver, legal,
+				legal ? note : "ОТКЛОНЕНО FSM: переход " + task.getStage() + " → " + target + " недопустим"));
+		if (!legal) {
+			return "Переход запрещён автоматом: " + task.getStage() + " → " + target;
+		}
+		task.setStage(target);
+		if (target == TaskStage.DONE) {
+			task.finish();
+		}
+		tasks.save(task);
+		return null;
+	}
+
+	public List<TaskStage> legalTargets(WorkingTask task) {
+		return task == null ? List.of() : task.getStage().legalTargets();
+	}
+
+	public List<TaskStateHistory> recentHistory(UUID taskId) {
+		return stageHistory.findTop10ByTaskIdOrderByCreatedAtDesc(taskId);
+	}
+
 	private ExtractResult extract(WorkingTask task, List<Message> added) {
 		Message user = lastOf(added, MessageType.USER);
 		Message assistant = lastOf(added, MessageType.ASSISTANT);
 		StringBuilder request = new StringBuilder();
-		request.append("Текущая задача: ").append(task == null ? "(нет активной задачи)" : task.getTitle()).append("\n");
-		request.append("Состояние задачи:\n")
-				.append(task == null || task.getState() == null || task.getState().isBlank() ? "(пусто)"
-						: task.getState())
-				.append("\n\n");
+		if (task == null) {
+			request.append("Активной задачи нет.\n\n");
+		}
+		else {
+			request.append("Текущая задача: ").append(task.getTitle()).append("\n");
+			request.append("Текущий этап: ").append(task.getStage()).append(" (")
+					.append(task.getStage().getLabel()).append(")\n");
+			request.append("Заметки по задаче:\n")
+					.append(task.getState() == null || task.getState().isBlank() ? "(пусто)" : task.getState())
+					.append("\n\n");
+		}
 		request.append("Ход диалога:\n");
 		if (user != null) {
 			request.append("ПОЛЬЗОВАТЕЛЬ: ").append(user.getText()).append("\n");
@@ -242,31 +301,61 @@ public class MemoryService {
 				.call()
 				.chatResponse();
 		Usage usage = response.getMetadata().getUsage();
-		String taskState = parseTask(response.getResult().getOutput().getText());
-		return new ExtractResult(taskState, usage.getPromptTokens(), usage.getCompletionTokens());
+		ExtractResult parsed = parseExtraction(response.getResult().getOutput().getText());
+		return new ExtractResult(parsed.stage(), parsed.step(), parsed.action(), parsed.notes(),
+				usage.getPromptTokens(), usage.getCompletionTokens());
 	}
 
-	private String parseTask(String text) {
+	private ExtractResult parseExtraction(String text) {
 		if (text == null || text.isBlank()) {
-			return null;
+			return new ExtractResult(null, null, null, null, 0, 0);
 		}
-		StringBuilder state = new StringBuilder();
-		boolean inTask = false;
+		TaskStage stage = null;
+		String step = null;
+		String action = null;
+		StringBuilder notes = new StringBuilder();
+		boolean inNotes = false;
 		for (String rawLine : text.split("\n")) {
 			String line = rawLine.strip();
 			if (line.isEmpty()) {
 				continue;
 			}
-			if (line.startsWith("TASK")) {
-				inTask = true;
+			String upper = line.toUpperCase();
+			if (upper.startsWith("NOTES")) {
+				inNotes = true;
 				continue;
 			}
-			if (inTask) {
-				state.append(line).append("\n");
+			if (stage == null && upper.startsWith("STAGE:")) {
+				stage = parseStage(line.substring(6));
+				continue;
+			}
+			if (step == null && upper.startsWith("STEP:")) {
+				step = line.substring(5).strip();
+				continue;
+			}
+			if (action == null && upper.startsWith("ACTION:")) {
+				action = line.substring(7).strip();
+				continue;
+			}
+			if (inNotes) {
+				notes.append(line).append("\n");
 			}
 		}
-		String result = state.toString().strip();
-		return result.isEmpty() ? null : result;
+		String notesText = notes.toString().strip();
+		return new ExtractResult(stage, step, action, notesText.isEmpty() ? null : notesText, 0, 0);
+	}
+
+	private TaskStage parseStage(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return null;
+		}
+		String token = raw.strip().split("\\s+")[0].replaceAll("[^A-Za-z]", "");
+		try {
+			return TaskStage.valueOf(token.toUpperCase());
+		}
+		catch (IllegalArgumentException e) {
+			return null;
+		}
 	}
 
 	private Message lastOf(List<Message> messages, MessageType type) {
