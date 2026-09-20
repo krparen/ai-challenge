@@ -45,6 +45,8 @@ public class MemoryService {
 
 	private final TaskStateHistoryRepository stageHistory;
 
+	private final InvariantRepository invariants;
+
 	private final ChatClient extractor;
 
 	private final int window;
@@ -54,7 +56,7 @@ public class MemoryService {
 	public MemoryService(ChatMemoryRepository shortTermRepository, ConversationRepository conversations,
 			ProfileRepository profiles, WorkingTaskRepository tasks, AgentMemoryRepository memories,
 			ProfileAttributeRepository attributes, TaskStateHistoryRepository stageHistory,
-			ChatClient.Builder builder,
+			InvariantRepository invariants, ChatClient.Builder builder,
 			@Value("${memory.short-term.window:10}") int window,
 			@Value("${memory.extraction-enabled:true}") boolean extractionEnabled) {
 		this.shortTermRepository = shortTermRepository;
@@ -64,6 +66,7 @@ public class MemoryService {
 		this.memories = memories;
 		this.attributes = attributes;
 		this.stageHistory = stageHistory;
+		this.invariants = invariants;
 		this.extractor = builder.build();
 		this.window = window;
 		this.extractionEnabled = extractionEnabled;
@@ -100,6 +103,7 @@ public class MemoryService {
 
 	public List<Message> buildContext(String conversationId) {
 		List<Message> prompt = new ArrayList<>();
+		addInvariantsBlock(prompt);
 		Conversation conversation = findConversation(conversationId);
 		if (conversation != null) {
 			Profile profile = profiles.findById(conversation.getProfileId()).orElse(null);
@@ -113,6 +117,27 @@ public class MemoryService {
 		prompt.add(new SystemMessage("=== КРАТКОСРОЧНАЯ ПАМЯТЬ (последние сообщения текущего диалога) ==="));
 		prompt.addAll(shortTermWindow(conversationId));
 		return prompt;
+	}
+
+	public List<Invariant> allInvariants() {
+		return invariants.findAllByOrderByCreatedAtAsc();
+	}
+
+	private void addInvariantsBlock(List<Message> prompt) {
+		List<Invariant> list = allInvariants();
+		StringBuilder sb = new StringBuilder("=== ИНВАРИАНТЫ ПРОЕКТА (нарушать запрещено) ===\n");
+		if (list.isEmpty()) {
+			sb.append("(инварианты не заданы)");
+		}
+		else {
+			for (int i = 0; i < list.size(); i++) {
+				Invariant invariant = list.get(i);
+				sb.append("И").append(i + 1).append(" [").append(invariant.getCategory()).append("]: ")
+						.append(invariant.getText()).append("\n");
+			}
+			sb.append("Правила: если запрос пользователя противоречит любому инварианту — откажись, явно назови номер и текст нарушенного инварианта и предложи альтернативу в рамках инвариантов. При предложении решений опирайся на применимые инварианты и ссылайся на них по номерам.");
+		}
+		prompt.add(new SystemMessage(sb.toString().strip()));
 	}
 
 	private void addProfileBlock(List<Message> prompt, Profile profile) {

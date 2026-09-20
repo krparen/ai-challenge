@@ -82,6 +82,31 @@
 	<p class="cid">беседа: <code th:text="${conversationId}"></code> · профиль: <b th:text="${profile.name}"></b></p>
 
 	<details class="layer" open>
+		<summary>Инварианты проекта (агент обязан их соблюдать)</summary>
+		<div class="memlist">
+			<div th:each="inv, st : ${invariants}">
+				<span class="tag" th:text="'И' + ${st.index + 1} + ' · ' + ${inv.category}"></span>
+				<span th:text="${inv.text}"></span>
+				<form method="post" action="/invariant/delete">
+					<input type="hidden" name="invariantId" th:value="${inv.id}">
+					<button type="submit" title="удалить инвариант">✕</button>
+				</form>
+			</div>
+			<p th:if="${invariants.isEmpty()}">Пока пусто — агент ничего не должен.</p>
+		</div>
+		<form method="post" action="/invariant/add">
+			<select name="category">
+				<option>архитектура</option>
+				<option>стек</option>
+				<option>техрешение</option>
+				<option>бизнес-правило</option>
+			</select>
+			<input type="text" name="text" placeholder="текст инварианта" required>
+			<button type="submit">добавить инвариант</button>
+		</form>
+	</details>
+
+	<details class="layer" open>
 		<summary>Профиль пользователя (стиль / формат / ограничения)</summary>
 		<form method="post" action="/profile/switch">
 			<select name="profileId" onchange="this.form.submit()">

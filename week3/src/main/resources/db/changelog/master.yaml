@@ -115,3 +115,15 @@ databaseChangeLog:
                   created_at timestamptz NOT NULL DEFAULT now()
               );
               CREATE INDEX task_state_history_task_id_idx ON task_state_history(task_id, created_at);
+  - changeSet:
+      id: 009-create-invariants
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE invariants (
+                  id uuid PRIMARY KEY,
+                  category VARCHAR(32) NOT NULL,
+                  text TEXT NOT NULL,
+                  created_at timestamptz NOT NULL DEFAULT now()
+              );

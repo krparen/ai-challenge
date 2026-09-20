@@ -46,9 +46,11 @@ public class ChatController {
 
 	private final ProfileAttributeRepository attributes;
 
+	private final InvariantRepository invariants;
+
 	public ChatController(ChatAgent agent, MemoryService memory, ConversationRepository conversations,
 			ProfileRepository profiles, WorkingTaskRepository tasks, AgentMemoryRepository memories,
-			ProfileAttributeRepository attributes) {
+			ProfileAttributeRepository attributes, InvariantRepository invariants) {
 		this.agent = agent;
 		this.memory = memory;
 		this.conversations = conversations;
@@ -56,6 +58,7 @@ public class ChatController {
 		this.tasks = tasks;
 		this.memories = memories;
 		this.attributes = attributes;
+		this.invariants = invariants;
 	}
 
 	@GetMapping("/")
@@ -82,6 +85,7 @@ public class ChatController {
 				: memory.recentHistory(memory.activeTask().getId()));
 		model.addAttribute("confirmedMemory", memory.confirmedMemory(profile.getId()));
 		model.addAttribute("profileAttrs", memory.profileAttributes(profile.getId()));
+		model.addAttribute("invariants", memory.allInvariants());
 		model.addAttribute("messages", toViews(agent.getMessages(conversation.getId().toString())));
 		model.addAttribute("historyStats", agent.getHistoryStats(conversation.getId().toString()));
 		model.addAttribute("window", memory.windowSize());
@@ -197,6 +201,22 @@ public class ChatController {
 				: null;
 		if (a != null && a.getProfileId().equals(profileUUID(profileId))) {
 			attributes.delete(a);
+		}
+		return "redirect:/chat";
+	}
+
+	@PostMapping("/invariant/add")
+	public String addInvariant(@RequestParam String category, @RequestParam String text) {
+		if (category != null && !category.isBlank() && text != null && !text.isBlank()) {
+			invariants.save(new Invariant(UUID.randomUUID(), category.strip(), text.strip()));
+		}
+		return "redirect:/chat";
+	}
+
+	@PostMapping("/invariant/delete")
+	public String deleteInvariant(@RequestParam String invariantId) {
+		if (invariantId != null && UUID_PATTERN.matcher(invariantId).matches()) {
+			invariants.findById(UUID.fromString(invariantId)).ifPresent(invariants::delete);
 		}
 		return "redirect:/chat";
 	}
