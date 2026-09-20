@@ -8,3 +8,14 @@
 2. Запустить приложение C:\Users\Admin\OpenideProjects\ai-challenge\week3\src\main\java\com\tutorial\ai_challenge\AiChallengeApplicationWeek3.java
 3. Перейти на http://localhost:8080
 4. Поиграться с настройками профиля, агента и задачами, попереписываться в чате, посмотреть, что происходит.
+
+
+## Задание 3 и 5
+
+Как проверить:
+
+1. Открыть коммит 2528c28ae9a5f841eb50bc65a58f358cf4387f97
+2. Запустить приложение C:\Users\Admin\OpenideProjects\ai-challenge\week3\src\main\java\com\tutorial\ai_challenge\AiChallengeApplicationWeek3.java
+3. Перейти на http://localhost:8080
+4. Создать задачу, пообсуждать её в чате с ллм. МОжно увидеть, что предложенные llm "запрещённые" переходы между стейтами не происходят.
+Ручные переходы между стейтами можно выбрать только разрешенные.
