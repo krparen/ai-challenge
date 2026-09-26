@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>MCP — инструменты</title>
+	<style>
+		body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 900px; color: #222; }
+		h1 { font-size: 1.4rem; }
+		h2 { font-size: 1.05rem; margin: 0 0 .25rem; }
+		button { font-size: 1rem; padding: .5rem 1.2rem; cursor: pointer; }
+		.server { border: 1px solid #ccc; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
+		.meta { color: #666; font-size: .85rem; margin-bottom: .75rem; }
+		.error { color: #b00020; background: #fdecea; border-radius: 6px; padding: .5rem .75rem; font-size: .9rem; }
+		table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+		th, td { border: 1px solid #ddd; padding: .4rem .6rem; text-align: left; vertical-align: top; }
+		th { background: #f4f4f4; }
+		code { background: #f4f4f4; padding: .1rem .3rem; border-radius: 4px; }
+		.hint { color: #666; font-size: .85rem; }
+	</style>
+</head>
+<body>
+<h1>MCP-клиент: доступные инструменты</h1>
+
+<form method="post" action="/mcp/tools">
+	<button type="submit">Запросить список инструментов</button>
+</form>
+
+<div class="server" th:each="s : ${servers}">
+	<h2 th:text="${s.server}">server</h2>
+	<div class="meta" th:if="${s.connected}">
+		подключено, инструментов: <b th:text="${#lists.size(s.tools)}">0</b>
+	</div>
+	<div class="error" th:if="${!s.connected}" th:text="${s.error}">ошибка</div>
+	<table th:if="${s.connected and !#lists.isEmpty(s.tools)}">
+		<tr>
+			<th>#</th>
+			<th>Инструмент</th>
+			<th>Описание</th>
+		</tr>
+		<tr th:each="t, st : ${s.tools}">
+			<td th:text="${st.count}">1</td>
+			<td><code th:text="${t.name}">tool</code></td>
+			<td th:text="${t.description}">desc</td>
+		</tr>
+	</table>
+</div>
+
+<p class="hint" th:if="${servers == null}">
+	Нажмите кнопку — бекенд установит MCP-соединение с настроенными серверами
+	и выведет список их инструментов.
+</p>
+</body>
+</html>

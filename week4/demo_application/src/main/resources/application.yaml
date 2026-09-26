@@ -4,7 +4,7 @@ server:
     max-http-form-post-size: 100MB
 spring:
   application:
-    name: ai_challenge_week4_service1
+    name: ai_challenge_week4_demo_application
   datasource:
     url: jdbc:postgresql://localhost:5432/challenge_week4_s1
     username: postgres
@@ -28,3 +28,13 @@ spring:
           model: deepseek-v4-flash
           thinking:
             type: disabled
+    mcp:
+      client:
+        enabled: true
+        name: ai-challenge-week4-s1
+        request-timeout: 30s
+        initialized: false
+        streamable-http:
+          connections:
+            deepwiki:
+              url: https://mcp.deepwiki.com/mcp
