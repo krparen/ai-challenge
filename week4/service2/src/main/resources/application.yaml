@@ -28,4 +28,10 @@ spring:
           model: deepseek-v4-flash
           thinking:
             type: disabled
+    mcp:
+      server:
+        protocol: streamable
+        name: mock-api
+        version: 1.0.0
+        instructions: "Mock API: случайные getColor (Синий/Зелёный/Красный) и getNumber (0–9)"
 

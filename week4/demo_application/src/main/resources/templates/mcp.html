@@ -45,9 +45,25 @@
 	</table>
 </div>
 
-<p class="hint" th:if="${servers == null}">
+<p class="hint" th:if="${servers == null and callColor == null and callError == null}">
 	Нажмите кнопку — бекенд установит MCP-соединение с настроенными серверами
 	и выведет список их инструментов.
 </p>
+
+<div class="server">
+	<h2>Вызов инструментов mock-api через MCP</h2>
+	<form method="post" action="/mcp/call">
+		<button type="submit">Вызвать getColor и getNumber</button>
+	</form>
+	<div class="meta" th:if="${callColor != null}">
+		getColor → <b th:text="${callColor}">цвет</b>,
+		getNumber → <b th:text="${callNumber}">0</b>
+	</div>
+	<div class="meta" th:if="${callPhrase}">
+		<em th:text="${callPhrase}">фраза</em>
+	</div>
+	<div class="error" th:if="${callError}" th:text="${callError}">ошибка</div>
+</div>
+
 </body>
 </html>

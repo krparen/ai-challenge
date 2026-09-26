@@ -38,3 +38,5 @@ spring:
           connections:
             deepwiki:
               url: https://mcp.deepwiki.com/mcp
+            mock-api:
+              url: http://localhost:8081
