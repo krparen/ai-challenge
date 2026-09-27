@@ -1,5 +1,7 @@
 package com.tutorial.ai_challenge;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 public class McpController {
@@ -72,6 +75,23 @@ public class McpController {
 		return "mcp";
 	}
 
+	public record SummaryView(boolean ok, String summary, String updatedAt, String error) {
+	}
+
+	@GetMapping("/mcp/summary")
+	@ResponseBody
+	public SummaryView summary() {
+		try {
+			McpSyncClient mock = findClient(MOCK_SERVER);
+			String summary = callTool(mock, "getSummary");
+			return new SummaryView(true, summary,
+					LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")), null);
+		}
+		catch (Exception e) {
+			return new SummaryView(false, null, null, describe(e));
+		}
+	}
+
 	private McpSyncClient findClient(String serverName) throws IllegalStateException {
 		for (McpSyncClient client : clients) {
 			try {
@@ -81,10 +101,10 @@ public class McpController {
 				}
 			}
 			catch (Exception e) {
-				throw new IllegalStateException("Не удалось подключиться к серверу '" + serverName + "': " + describe(e));
+				// сервер временно недоступен — пропускаем и ищем дальше
 			}
 		}
-		throw new IllegalStateException("Сервер '" + serverName + "' не настроен");
+		throw new IllegalStateException("Сервер '" + serverName + "' не подключён");
 	}
 
 	private McpSchema.InitializeResult initialize(McpSyncClient client) {

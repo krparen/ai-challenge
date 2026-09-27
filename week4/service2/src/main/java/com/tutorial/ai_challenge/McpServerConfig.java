@@ -8,9 +8,9 @@ import org.springframework.context.annotation.Configuration;
 public class McpServerConfig {
 
 	@Bean
-	public MethodToolCallbackProvider mockToolCallbackProvider(MockService mockService) {
+	public MethodToolCallbackProvider mockToolCallbackProvider(MockService mockService, SampleStore sampleStore) {
 		return MethodToolCallbackProvider.builder()
-				.toolObjects(new MockMcpTools(mockService))
+				.toolObjects(new MockMcpTools(mockService, sampleStore))
 				.build();
 	}
 

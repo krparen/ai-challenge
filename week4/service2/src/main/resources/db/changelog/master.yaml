@@ -1,1 +1,14 @@
 databaseChangeLog:
+  - changeSet:
+      id: 001-create-mock-samples
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE mock_samples (
+                  id bigserial PRIMARY KEY,
+                  ts timestamptz NOT NULL DEFAULT now(),
+                  color VARCHAR(16) NOT NULL,
+                  sample_number INT NOT NULL
+              );
+              CREATE INDEX idx_mock_samples_ts ON mock_samples (ts);

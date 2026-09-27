@@ -33,5 +33,9 @@ spring:
         protocol: streamable
         name: mock-api
         version: 1.0.0
-        instructions: "Mock API: случайные getColor (Синий/Зелёный/Красный) и getNumber (0–9)"
+        instructions: "Mock API: случайные getColor (Синий/Зелёный/Красный) и getNumber (0–9); getSummary — сводка по фоновому сбору проб (каждые 5 с)"
+
+mock:
+  collect:
+    interval-ms: 5000
 

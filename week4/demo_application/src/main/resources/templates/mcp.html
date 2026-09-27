@@ -65,5 +65,32 @@
 	<div class="error" th:if="${callError}" th:text="${callError}">ошибка</div>
 </div>
 
+<div class="server">
+	<h2>Автосводка от mock-api <span class="meta">(фоновый сбор каждые 5 с, опрос раз в 5 с)</span></h2>
+	<div id="auto-summary">—</div>
+	<div class="meta" id="auto-summary-ts"></div>
+</div>
+
+<script>
+	const box = document.getElementById('auto-summary');
+	const tsBox = document.getElementById('auto-summary-ts');
+	async function refreshSummary() {
+		try {
+			const r = await fetch('/mcp/summary');
+			const d = await r.json();
+			if (d.ok) {
+				box.textContent = d.summary;
+				tsBox.textContent = 'обновлено: ' + d.updatedAt;
+			} else {
+				tsBox.textContent = 'ошибка: ' + d.error;
+			}
+		} catch (e) {
+			tsBox.textContent = 'ошибка: ' + e;
+		}
+	}
+	refreshSummary();
+	setInterval(refreshSummary, 5000);
+</script>
+
 </body>
 </html>
