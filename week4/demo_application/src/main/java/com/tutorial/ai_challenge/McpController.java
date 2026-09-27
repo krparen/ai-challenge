@@ -62,8 +62,8 @@ public class McpController {
 	public String call(Model model) {
 		try {
 			McpSyncClient mock = findClient(MOCK_SERVER);
-			String color = callTool(mock, "getColor");
-			String number = callTool(mock, "getNumber");
+			String color = callTool(mock, "getColor", Map.of());
+			String number = callTool(mock, "getNumber", Map.of());
 			model.addAttribute("callColor", color);
 			model.addAttribute("callNumber", number);
 			model.addAttribute("callPhrase",
@@ -71,6 +71,23 @@ public class McpController {
 		}
 		catch (Exception e) {
 			model.addAttribute("callError", describe(e));
+		}
+		return "mcp";
+	}
+
+	@PostMapping("/mcp/pipeline")
+	public String pipeline(Model model) {
+		try {
+			McpSyncClient mock = findClient(MOCK_SERVER);
+			String data = callTool(mock, "getSummary", Map.of());
+			String summary = callTool(mock, "summarizeText", Map.of("text", data));
+			String saved = callTool(mock, "saveToFile", Map.of("text", summary));
+			model.addAttribute("pipelineData", data);
+			model.addAttribute("pipelineSummary", summary);
+			model.addAttribute("pipelineSaved", saved);
+		}
+		catch (Exception e) {
+			model.addAttribute("pipelineError", describe(e));
 		}
 		return "mcp";
 	}
@@ -83,7 +100,7 @@ public class McpController {
 	public SummaryView summary() {
 		try {
 			McpSyncClient mock = findClient(MOCK_SERVER);
-			String summary = callTool(mock, "getSummary");
+			String summary = callTool(mock, "getSummary", Map.of());
 			return new SummaryView(true, summary,
 					LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")), null);
 		}
@@ -114,8 +131,9 @@ public class McpController {
 		return client.getCurrentInitializationResult();
 	}
 
-	private String callTool(McpSyncClient client, String toolName) throws IllegalStateException {
-		McpSchema.CallToolResult result = client.callTool(new McpSchema.CallToolRequest(toolName, Map.of()));
+	private String callTool(McpSyncClient client, String toolName, Map<String, Object> args)
+			throws IllegalStateException {
+		McpSchema.CallToolResult result = client.callTool(new McpSchema.CallToolRequest(toolName, args));
 		if (Boolean.TRUE.equals(result.isError())) {
 			throw new IllegalStateException("Инструмент '" + toolName + "' вернул ошибку");
 		}

@@ -66,6 +66,23 @@
 </div>
 
 <div class="server">
+	<h2>Пайплайн: getSummary → summarizeText → saveToFile</h2>
+	<form method="post" action="/mcp/pipeline">
+		<button type="submit">Запустить пайплайн</button>
+	</form>
+	<div class="meta" th:if="${pipelineData != null}">
+		<b>Шаг 1 — getSummary:</b> <span th:text="${pipelineData}">данные</span>
+	</div>
+	<div class="meta" th:if="${pipelineSummary != null}">
+		<b>Шаг 2 — summarizeText:</b> <span th:text="${pipelineSummary}">сводка</span>
+	</div>
+	<div class="meta" th:if="${pipelineSaved != null}">
+		<b>Шаг 3 — saveToFile:</b> <span th:text="${pipelineSaved}">файл</span>
+	</div>
+	<div class="error" th:if="${pipelineError != null}" th:text="${pipelineError}">ошибка</div>
+</div>
+
+<div class="server">
 	<h2>Автосводка от mock-api <span class="meta">(фоновый сбор каждые 5 с, опрос раз в 5 с)</span></h2>
 	<div id="auto-summary">—</div>
 	<div class="meta" id="auto-summary-ts"></div>

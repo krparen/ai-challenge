@@ -38,4 +38,6 @@ spring:
 mock:
   collect:
     interval-ms: 5000
+  save:
+    dir: saved
 
