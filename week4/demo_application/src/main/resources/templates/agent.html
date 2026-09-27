@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>MCP-агент</title>
+	<style>
+		body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 900px; color: #222; }
+		h1 { font-size: 1.4rem; }
+		textarea { width: 100%; box-sizing: border-box; font: inherit; }
+		button { font-size: 1rem; padding: .5rem 1.2rem; cursor: pointer; margin-top: .5rem; }
+		.block { border: 1px solid #ccc; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
+		.label { color: #666; font-size: .85rem; margin-bottom: .35rem; }
+		.answer { white-space: pre-wrap; }
+		.error { color: #b00020; background: #fdecea; border-radius: 6px; padding: .5rem .75rem; font-size: .9rem; }
+		.hint { color: #666; font-size: .85rem; }
+		a { color: #0366d6; }
+	</style>
+</head>
+<body>
+<h1>MCP-агент: оркестрация инструментов двух серверов</h1>
+
+<p class="hint">
+	Подключённые серверы: <b>name-api</b> (getNameOfDay) и <b>mock-api</b>
+	(getColor, getNumber, getSummary, summarizeText, saveToFile).
+	Модель сама выбирает инструменты и порядок вызовов.
+	<a href="/mcp">страница MCP-клиента</a>
+</p>
+
+<form method="post" action="/agent/ask">
+	<div class="block">
+		<div class="label">Вопрос агенту</div>
+		<textarea name="question" rows="3"
+			placeholder="Например: узнай имя дня, цвет дня и число дня, собери из этого приветствие дня и сохрани его в файл"></textarea>
+		<button type="submit">Спросить</button>
+	</div>
+</form>
+
+<div class="block" th:if="${question != null}">
+	<div class="label">Вопрос</div>
+	<div class="answer" th:text="${question}">вопрос</div>
+</div>
+
+<div class="block" th:if="${answer != null}">
+	<div class="label">Ответ агента</div>
+	<div class="answer" th:text="${answer}">ответ</div>
+</div>
+
+<div class="error" th:if="${error != null}" th:text="${error}">ошибка</div>
+
+</body>
+</html>

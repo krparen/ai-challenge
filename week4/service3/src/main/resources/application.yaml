@@ -1,0 +1,12 @@
+server:
+  port: 8082
+spring:
+  application:
+    name: ai_challenge_week4_service3
+  ai:
+    mcp:
+      server:
+        protocol: streamable
+        name: name-api
+        version: 1.0.0
+        instructions: "Name API: случайное имя дня (Андрей, Борис, Вениамин, Григорий или Дмитрий)"

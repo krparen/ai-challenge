@@ -36,7 +36,7 @@ spring:
         initialized: false
         streamable-http:
           connections:
-            deepwiki:
-              url: https://mcp.deepwiki.com/mcp
             mock-api:
               url: http://localhost:8081
+            name-api:
+              url: http://localhost:8082
