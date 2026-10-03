@@ -29,6 +29,8 @@ spring:
             type: disabled
     embedding:
       transformer:
+        cache:
+          directory: ${user.home}/.spring-ai-model-cache
         onnx:
           model-uri: https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/onnx/model_quantized.onnx
         tokenizer:
