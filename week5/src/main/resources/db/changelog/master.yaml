@@ -1,1 +1,19 @@
 databaseChangeLog:
+  - changeSet:
+      id: 001-create-doc-chunks
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE doc_chunks (
+                  id bigserial PRIMARY KEY,
+                  strategy VARCHAR(16) NOT NULL,
+                  source VARCHAR(256) NOT NULL,
+                  title VARCHAR(256) NOT NULL,
+                  section VARCHAR(512),
+                  chunk_id INT NOT NULL,
+                  content TEXT NOT NULL,
+                  embedding JSONB NOT NULL,
+                  created_at timestamptz NOT NULL DEFAULT now()
+              );
+              CREATE INDEX idx_doc_chunks_strategy ON doc_chunks (strategy);

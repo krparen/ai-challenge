@@ -27,3 +27,9 @@ spring:
           model: deepseek-v4-flash
           thinking:
             type: disabled
+    embedding:
+      transformer:
+        onnx:
+          model-uri: https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/onnx/model_quantized.onnx
+        tokenizer:
+          uri: https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/tokenizer.json

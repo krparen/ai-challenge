@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>Индексация документов</title>
+	<style>
+		body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 980px; color: #222; }
+		h1 { font-size: 1.4rem; }
+		h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
+		button { font-size: .95rem; padding: .4rem 1rem; cursor: pointer; }
+		input[type="text"] { width: 60%; font: inherit; padding: .3rem .5rem; }
+		select { font: inherit; padding: .3rem; }
+		.block { border: 1px solid #ccc; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
+		.meta { color: #666; font-size: .85rem; }
+		.hit { border-top: 1px solid #eee; padding: .6rem 0; }
+		.hit:first-of-type { border-top: none; }
+		.score { float: right; color: #0366d6; font-weight: bold; }
+		.content { white-space: pre-wrap; background: #f8f8f8; border-radius: 6px; padding: .5rem .75rem; margin-top: .35rem;
+			font-size: .85rem; max-height: 7rem; overflow: auto; }
+		.section { color: #7c4dff; font-size: .85rem; }
+		table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+		th, td { border: 1px solid #ddd; padding: .4rem .6rem; text-align: left; }
+		th { background: #f4f4f4; }
+		.ok { color: #0a7a0a; font-weight: bold; }
+		.bad { color: #b00020; font-weight: bold; }
+		.hint { color: #666; font-size: .85rem; }
+	</style>
+</head>
+<body>
+<h1>Индексация документов с эмбеддингами</h1>
+
+<p class="hint">
+	Корпус: справочник «Заклинания мира Тани Гроттер» (упакован в ресурсы приложения).
+	Эмбеддинги: локальная ONNX-модель
+	paraphrase-multilingual-MiniLM-L12-v2 (384 измерения). Хранилище: таблица
+	<code>doc_chunks</code> (embedding в JSONB), поиск — cosine similarity.
+</p>
+
+<div class="block">
+	<h2>1. Индексация</h2>
+	<form method="post" th:each="s : ${strategies}" style="margin: .3rem 0;"
+		th:action="@{/index/run}">
+		<input type="hidden" name="strategy" th:value="${s.strategy}">
+		<button type="submit" th:text="'Проиндексировать: ' + ${s.strategy}">стратегия</button>
+		<span class="meta" th:text="'чанков сейчас: ' + ${s.chunks}">0</span>
+	</form>
+	<div class="meta" th:if="${runStats != null}" th:text="${runStats}">статистика</div>
+</div>
+
+<div class="block">
+	<h2>2. Поиск по индексу</h2>
+	<form method="post" action="/index/search">
+		<select name="strategy">
+			<option value="fixed">fixed</option>
+			<option value="struct">struct</option>
+		</select>
+		<input type="text" name="query" placeholder="поисковый запрос">
+		<button type="submit">Найти</button>
+	</form>
+	<div class="meta" th:if="${query != null}">
+		Запрос «<span th:text="${query}">q</span>» (стратегия <span th:text="${searchStrategy}">s</span>):
+	</div>
+	<div th:each="h, st : ${hits}" class="hit">
+		<span class="score" th:text="${#numbers.formatDecimal(h.score * 100, 1, 1) + '%'}">99%</span>
+		<b th:text="${h.title}">файл</b>
+		<span class="section" th:text="'раздел: ' + ${h.section}">раздел</span>
+		<span class="meta" th:text="'chunk #' + ${h.chunkId}">#0</span>
+		<div class="content" th:text="${h.content}">текст</div>
+	</div>
+</div>
+
+<div class="block">
+	<h2>3. Сравнение стратегий chunking</h2>
+	<form method="post" action="/index/compare">
+		<button type="submit">Переиндексировать обе и сравнить</button>
+	</form>
+	<table th:if="${compareRows != null}">
+		<tr>
+			<th>Стратегия</th>
+			<th>Документов</th>
+			<th>Чанков</th>
+			<th>Средний размер, симв.</th>
+			<th>Индексация, мс</th>
+			<th>Попаданий в топ-5</th>
+		</tr>
+		<tr th:each="r : ${compareRows}">
+			<td th:text="${r.strategy}">fixed</td>
+			<td th:text="${r.docs}">6</td>
+			<td th:text="${r.chunks}">100</td>
+			<td th:text="${r.avgChars}">800</td>
+			<td th:text="${r.indexMs}">1000</td>
+			<td>
+				<span th:class="${r.hits >= 6 ? 'ok' : 'bad'}"
+					th:text="${r.hits + ' из ' + r.total}">8 из 8</span>
+			</td>
+		</tr>
+	</table>
+	<p class="hint" th:if="${compareRows != null}">
+		Контрольные запросы: <span th:each="q, st : ${controlQueries}"><span th:text="${q}">q</span><span
+			th:if="${!st.last}">; </span></span>
+	</p>
+</div>
+
+</body>
+</html>
