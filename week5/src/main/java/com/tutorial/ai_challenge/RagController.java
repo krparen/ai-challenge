@@ -21,19 +21,26 @@ public class RagController {
 	}
 
 	@PostMapping("/rag/ask")
-	public String ask(@RequestParam String question, Model model) {
+	public String ask(@RequestParam String question,
+			@RequestParam(defaultValue = "true") boolean rewrite,
+			@RequestParam(defaultValue = "rerank") String mode,
+			Model model) {
+		RagService.FilterMode filterMode = "threshold".equals(mode) ? RagService.FilterMode.THRESHOLD
+				: RagService.FilterMode.RERANK;
+		RagService.AskResult result = ragService.askBoth(question, rewrite, filterMode);
 		model.addAttribute("question", question);
-		RagService.RagAnswer plain = ragService.ask(question, false);
-		RagService.RagAnswer rag = ragService.ask(question, true);
-		model.addAttribute("plainAnswer", plain.answer());
-		model.addAttribute("ragAnswer", rag.answer());
-		model.addAttribute("ragHits", rag.hits());
+		model.addAttribute("result", result);
+		model.addAttribute("mode", mode);
+		model.addAttribute("rewrite", rewrite);
 		return "rag";
 	}
 
 	@PostMapping("/rag/control")
-	public String control(Model model) {
-		model.addAttribute("controlRows", ragService.runControl());
+	public String control(@RequestParam(defaultValue = "rerank") String mode, Model model) {
+		RagService.FilterMode filterMode = "threshold".equals(mode) ? RagService.FilterMode.THRESHOLD
+				: RagService.FilterMode.RERANK;
+		model.addAttribute("controlRows", ragService.runControl(filterMode));
+		model.addAttribute("controlMode", filterMode == RagService.FilterMode.THRESHOLD ? "порог" : "реранк");
 		return "rag";
 	}
 

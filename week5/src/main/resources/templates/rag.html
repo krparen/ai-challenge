@@ -7,8 +7,8 @@
 		body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 980px; color: #222; }
 		h1 { font-size: 1.4rem; }
 		h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
+		h3 { font-size: 1rem; margin: .75rem 0 .35rem; }
 		textarea { width: 100%; box-sizing: border-box; font: inherit; }
-		input[type="text"] { width: 70%; font: inherit; padding: .3rem .5rem; }
 		button { font-size: .95rem; padding: .4rem 1rem; cursor: pointer; margin-top: .5rem; }
 		.block { border: 1px solid #ccc; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
 		.label { color: #666; font-size: .85rem; margin-bottom: .35rem; }
@@ -16,6 +16,8 @@
 		.hit { border-top: 1px solid #eee; padding: .35rem 0; font-size: .85rem; color: #555; }
 		.section { color: #7c4dff; }
 		.score { float: right; color: #0366d6; }
+		.used { color: #0a7a0a; font-weight: bold; }
+		.dropped { color: #b00020; text-decoration: line-through; }
 		table { border-collapse: collapse; width: 100%; font-size: .85rem; }
 		th, td { border: 1px solid #ddd; padding: .35rem .5rem; text-align: left; vertical-align: top; }
 		th { background: #f4f4f4; }
@@ -23,74 +25,103 @@
 		.bad { color: #b00020; font-weight: bold; }
 		.answer-cell { max-width: 320px; max-height: 6rem; overflow: auto; white-space: pre-wrap; }
 		.hint { color: #666; font-size: .85rem; }
+		.cols { display: flex; gap: 1rem; }
+		.cols > div { flex: 1; min-width: 0; }
 		a { color: #0366d6; }
 	</style>
 </head>
 <body>
-<h1>RAG: вопрос → поиск по чанкам → ответ LLM</h1>
+<h1>RAG: поиск → фильтрация/реранкинг → ответ LLM</h1>
 
 <p class="hint">
 	База: «Заклинания мира Тани Гроттер» (см. <a href="/index">индексацию</a>).
-	Режим «без RAG» — модель отвечает как есть, «с RAG» — в промпт подкладываются топ-5 чанков
-	из векторного поиска (структурная стратегия).
+	Старый пайплайн — векторный поиск топ-5 без обработки (как в задании 2).
+	Новый — query rewrite (переписывание вопроса под лексику справочника) → поиск топ-10 →
+	фильтрация (порог similarity 0.45 или LLM-реранк) → топ-4 в промпт.
 </p>
 
 <form method="post" action="/rag/ask">
 	<div class="block">
-		<div class="label">Вопрос (проверится в обоих режимах)</div>
+		<div class="label">Вопрос (сравнится в обоих пайплайнах)</div>
 		<textarea name="question" rows="2"
-			placeholder="Например: какое заклинание отделяет душу от тела?"></textarea>
-		<button type="submit">Спросить (без RAG + с RAG)</button>
+			placeholder="Например: какое заклинание удерживает от падения?"></textarea>
+		<div>
+			<label><input type="checkbox" name="rewrite" value="true" checked> query rewrite (переписать вопрос перед поиском)</label>
+			&nbsp;&nbsp;
+			<label>фильтр:
+				<select name="mode">
+					<option value="rerank">LLM-реранк</option>
+					<option value="threshold">порог similarity</option>
+				</select>
+			</label>
+		</div>
+		<button type="submit">Сравнить пайплайны</button>
 	</div>
 </form>
 
 <div class="block" th:if="${question != null}">
 	<div class="label">Вопрос: <span th:text="${question}">q</span></div>
-	<h2>Ответ без RAG</h2>
-	<div class="answer" th:text="${plainAnswer}">…</div>
-	<h2>Ответ с RAG</h2>
-	<div class="answer" th:text="${ragAnswer}">…</div>
-	<div class="label" style="margin-top: .75rem;">Использованные чанки (топ-5):</div>
-	<div class="hit" th:each="h : ${ragHits}">
-		<span class="score" th:text="${#numbers.formatDecimal(h.score * 100, 1, 1) + '%'}">99%</span>
-		<span class="section" th:text="'раздел: ' + ${h.section}">раздел</span>
-		<span th:text="' | чанк #' + ${h.chunkId}">#0</span>
+	<div class="label" th:if="${result.rewritten != null}">
+		Переписанный вопрос: <span th:text="${result.rewritten}">rw</span>
+	</div>
+	<div class="cols">
+		<div>
+			<h2 th:text="${result.oldPipeline.name}">старый</h2>
+			<div class="answer" th:text="${result.oldPipeline.answer}">…</div>
+		</div>
+		<div>
+			<h2 th:text="${result.newPipeline.name}">новый</h2>
+			<div class="answer" th:text="${result.newPipeline.answer}">…</div>
+		</div>
+	</div>
+	<h3>Кандидаты нового пайплайна (топ-10 после rewrite):</h3>
+	<div class="hit" th:each="c : ${result.newPipeline.candidates}">
+		<span class="score" th:text="${#numbers.formatDecimal(c.hit.score * 100, 1, 1) + '%'}">99%</span>
+		<span th:class="${c.used ? 'used' : 'dropped'}" th:text="${c.used ? '✓ ' + c.note : '✕ ' + c.note}">note</span>
+		<span class="section" th:text="' | ' + ${c.hit.section}">раздел</span>
+		<span th:text="' | чанк #' + ${c.hit.chunkId}">#0</span>
 	</div>
 </div>
 
 <div class="block">
-	<h2>Контрольные вопросы (10)</h2>
+	<h2>Контроль: старый vs новый пайплайн (10 вопросов)</h2>
 	<form method="post" action="/rag/control">
-		<button type="submit">Прогнать все 10 в двух режимах (займёт пару минут)</button>
+		<label>фильтр нового пайплайна:
+			<select name="mode">
+				<option value="rerank">LLM-реранк</option>
+				<option value="threshold">порог similarity</option>
+			</select>
+		</label>
+		&nbsp;
+		<button type="submit">Прогнать 10 вопросов (займёт несколько минут)</button>
 	</form>
+	<p class="hint" th:if="${controlRows != null}">
+		Фильтр: <span th:text="${controlMode}">режим</span>. «есть» = в ответе содержится ожидаемая формула заклинания.
+	</p>
 	<table th:if="${controlRows != null}">
 		<tr>
 			<th>Вопрос</th>
 			<th>Ожидание</th>
-			<th>Без RAG</th>
-			<th>С RAG</th>
-			<th>Разделы (источники RAG)</th>
+			<th>Старый (топ-5, без фильтра)</th>
+			<th>Новый (rewrite + фильтр)</th>
+			<th>Разделы (новый)</th>
 		</tr>
 		<tr th:each="r : ${controlRows}">
 			<td th:text="${r.question.question()}">q</td>
 			<td th:text="${r.question.expected()}">e</td>
 			<td>
-				<div th:class="${r.plainOk ? 'ok' : 'bad'}" th:text="${r.plainOk ? 'есть' : 'нет'}">ок</div>
-				<div class="answer-cell" th:text="${r.plainAnswer}">…</div>
+				<div th:class="${r.oldOk ? 'ok' : 'bad'}" th:text="${r.oldOk ? 'есть' : 'нет'}">ок</div>
+				<div class="answer-cell" th:text="${r.oldAnswer}">…</div>
 			</td>
 			<td>
-				<div th:class="${r.ragOk ? 'ok' : 'bad'}" th:text="${r.ragOk ? 'есть' : 'нет'}">ок</div>
-				<div class="answer-cell" th:text="${r.ragAnswer}">…</div>
+				<div th:class="${r.newOk ? 'ok' : 'bad'}" th:text="${r.newOk ? 'есть' : 'нет'}">ок</div>
+				<div class="answer-cell" th:text="${r.newAnswer}">…</div>
 			</td>
 			<td>
 				<div class="section" th:each="s : ${r.sections}" th:text="${s}">раздел</div>
 			</td>
 		</tr>
 	</table>
-	<p class="hint" th:if="${controlRows != null}">
-		«есть» = в ответе содержится ожидаемая формула заклинания. У модели без RAG
-		вымышленных заклинаний обычно нет — она либо выдумывает, либо отказывается отвечать.
-	</p>
 </div>
 
 </body>
