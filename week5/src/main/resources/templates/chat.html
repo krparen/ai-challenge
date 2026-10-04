@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>Чат с RAG — заклинания Тани Гроттер</title>
+	<style>
+		body { font-family: system-ui, sans-serif; margin: 1.5rem auto; max-width: 860px; color: #222; }
+		h1 { font-size: 1.3rem; }
+		.hint { color: #666; font-size: .85rem; }
+		a { color: #0366d6; }
+		.chat { border: 1px solid #ccc; border-radius: 8px; padding: 1rem; margin: 1rem 0; min-height: 200px; }
+		.msg { margin: .5rem 0; }
+		.bubble { border-radius: 8px; padding: .5rem .75rem; white-space: pre-wrap; max-width: 85%; }
+		.user .bubble { background: #dcecff; margin-left: auto; }
+		.assistant .bubble { background: #f2f2f2; }
+		.msg.user { text-align: right; }
+		.role { font-size: .75rem; color: #888; margin-bottom: .15rem; }
+		.sources { font-size: .78rem; color: #555; border-left: 3px solid #7c4dff; padding-left: .5rem; margin: .3rem 0 0 0; text-align: left; max-width: 85%; }
+		.sources .section { color: #7c4dff; }
+		form { display: flex; gap: .5rem; align-items: flex-start; }
+		textarea { flex: 1; font: inherit; box-sizing: border-box; }
+		button { font-size: .95rem; padding: .45rem 1rem; cursor: pointer; }
+		.topbar { display: flex; justify-content: space-between; align-items: center; }
+	</style>
+</head>
+<body>
+<div class="topbar">
+	<h1>Мини-чат с RAG и памятью</h1>
+	<form method="post" action="/chat/new">
+		<button type="submit">Новый диалог</button>
+	</form>
+</div>
+<p class="hint">
+	База: «Заклинания мира Тани Гроттер» (<a href="/index">индексация</a>, <a href="/rag">RAG-лаборатория</a>).
+	Каждый вопрос → векторный поиск топ-4 чанков → контекст в системном сообщении → ответ с учётом истории.
+	Память — окно 100 сообщений (сохраняется в PostgreSQL, переживает рестарт).
+	Источники показываются под каждым ответом ассистента.
+	История: <span th:text="${historySize}">0</span> сообщений (окно <span th:text="${window}">100</span>).
+</p>
+
+<div class="chat">
+	<div class="msg empty hint" th:if="${#lists.isEmpty(messages)}">
+		Задай вопрос — например: «Собираем ТЗ на брошюру о запрещённых заклинаниях: какие разделы предложить?»
+	</div>
+	<div class="msg" th:each="m : ${messages}" th:classappend="${m.role}">
+		<div class="role" th:text="${m.role == 'user' ? 'Вы' : 'Ассистент'}">роль</div>
+		<div class="bubble" th:text="${m.text}">текст</div>
+		<div class="sources" th:if="${m.role == 'assistant' and !#lists.isEmpty(m.sources)}">
+			<div th:each="s : ${m.sources}">
+				📚 <span class="section" th:text="${s.section}">раздел</span>
+				<span th:text="' | чанк #' + ${s.chunkId}">#0</span>
+			</div>
+		</div>
+	</div>
+</div>
+
+<form method="post" action="/chat/send">
+	<textarea name="question" rows="2" placeholder="Ваш вопрос…"></textarea>
+	<button type="submit">Отправить</button>
+</form>
+
+</body>
+</html>
