@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>Чат с локальной LLM</title>
+	<style>
+		body { font-family: system-ui, sans-serif; margin: 1.5rem auto; max-width: 860px; color: #222; }
+		h1 { font-size: 1.3rem; }
+		.hint { color: #666; font-size: .85rem; }
+		.chat { border: 1px solid #ccc; border-radius: 8px; padding: 1rem; margin: 1rem 0; min-height: 200px; }
+		.msg { margin: .5rem 0; }
+		.bubble { border-radius: 8px; padding: .5rem .75rem; white-space: pre-wrap; max-width: 85%; display: inline-block; }
+		.user .bubble { background: #dcecff; }
+		.assistant .bubble { background: #f2f2f2; }
+		.msg.user { text-align: right; }
+		.role { font-size: .75rem; color: #888; margin-bottom: .15rem; }
+		form { display: flex; gap: .5rem; align-items: flex-start; }
+		textarea { flex: 1; font: inherit; box-sizing: border-box; }
+		button { font-size: .95rem; padding: .45rem 1rem; cursor: pointer; }
+		.topbar { display: flex; justify-content: space-between; align-items: center; }
+	</style>
+</head>
+<body>
+<div class="topbar">
+	<h1>Чат с локальной LLM (qwen2.5:3b через Ollama)</h1>
+	<form method="post" action="/chat/new">
+		<button type="submit">Новый диалог</button>
+	</form>
+</div>
+<p class="hint">
+	Полностью локально: модель qwen2.5:3b на <a href="http://localhost:11434" target="_blank">Ollama</a> (порт 11434),
+	облачные API не используются. Память — окно <span th:text="${window}">10</span> сообщений
+	(сохраняется в PostgreSQL, переживает рестарт приложения).
+	История: <span th:text="${historySize}">0</span> сообщений.
+</p>
+
+<div class="chat">
+	<div class="msg hint" th:if="${#lists.isEmpty(messages)}">
+		Задай вопрос — например: «Привет! Меня зовут Алекс. Запомни.»
+	</div>
+	<div class="msg" th:each="m : ${messages}" th:classappend="${m.role}">
+		<div class="role" th:text="${m.role == 'user' ? 'Вы' : 'Локальная модель'}">роль</div>
+		<div class="bubble" th:text="${m.text}">текст</div>
+	</div>
+</div>
+
+<form method="post" action="/chat/send">
+	<textarea name="question" rows="2" placeholder="Ваш вопрос…"></textarea>
+	<button type="submit">Отправить</button>
+</form>
+
+</body>
+</html>

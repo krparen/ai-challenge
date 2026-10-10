@@ -20,10 +20,8 @@ spring:
         repository:
           jdbc:
             initialize-schema: never
-    deepseek:
-      api-key: ${DEEPSEEK_API_KEY}
+    ollama:
+      base-url: http://localhost:11434
       chat:
         options:
-          model: deepseek-v4-flash
-          thinking:
-            type: disabled
+          model: qwen2.5:3b
