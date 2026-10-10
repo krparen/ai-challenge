@@ -10,6 +10,7 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
+import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,8 +29,8 @@ public class ChatService {
 	private final ChatMemory chatMemory;
 	private final ChatMemoryRepository historyRepository;
 
-	public ChatService(ChatClient.Builder builder, ChatMemory chatMemory, ChatMemoryRepository historyRepository) {
-		this.chatClient = builder
+	public ChatService(OllamaChatModel chatModel, ChatMemory chatMemory, ChatMemoryRepository historyRepository) {
+		this.chatClient = ChatClient.builder(chatModel)
 				.defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
 				.build();
 		this.chatMemory = chatMemory;

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>Локальная LLM + RAG</title>
+	<style>
+		body { font-family: system-ui, sans-serif; margin: 1.5rem auto; max-width: 1000px; color: #222; }
+		h1 { font-size: 1.3rem; }
+		h2 { font-size: 1.05rem; }
+		.hint { color: #666; font-size: .85rem; }
+		a { color: #0366d6; }
+		form { margin: .6rem 0 1rem 0; display: flex; gap: .5rem; align-items: flex-start; }
+		textarea { flex: 1; font: inherit; box-sizing: border-box; }
+		button { font-size: .95rem; padding: .45rem 1rem; cursor: pointer; white-space: nowrap; }
+		.msg { border-radius: 8px; padding: .5rem .75rem; margin: .5rem 0; }
+		.ok { background: #e6f6e6; }
+		.err { background: #fde8e8; }
+		.cols { display: flex; gap: 1rem; }
+		.col { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: .75rem; }
+		.answer { white-space: pre-wrap; font-size: .95rem; }
+		.time { color: #666; font-size: .8rem; margin-top: .5rem; }
+		.sources { font-size: .8rem; color: #555; border-left: 3px solid #7c4dff; padding-left: .5rem; margin: .75rem 0; }
+		.sources .section { color: #7c4dff; }
+		table { border-collapse: collapse; width: 100%; font-size: .88rem; margin: .5rem 0; }
+		th, td { border: 1px solid #ccc; padding: .35rem .5rem; text-align: left; vertical-align: top; }
+		.hit { color: #1a7f37; font-weight: 600; }
+		.miss { color: #c0392b; font-weight: 600; }
+		.summary { background: #eef; border-radius: 8px; padding: .6rem .8rem; font-size: .92rem; }
+	</style>
+</head>
+<body>
+<h1>Локальная LLM + RAG — заклинания Тани Гроттер</h1>
+<p class="hint">
+	Retrieval локальный: эмбеддинги paraphrase-multilingual-MiniLM (ONNX, 384d) + поиск косинусом по top-4 чанкам.
+	Генерация: <b>локально</b> qwen2.5:3b (Ollama) против <b>облака</b> deepseek-v4-flash — на одинаковом контексте и промпте.
+	Чат: <a href="/chat">/chat</a>
+</p>
+
+<form method="post" action="/rag/index">
+	<button type="submit">Индексировать корпус</button>
+	<span class="hint">в индексе: <span th:text="${indexed}">0</span> чанков</span>
+</form>
+<div class="msg ok" th:if="${message}" th:text="${message}"></div>
+<div class="msg err" th:if="${error}" th:text="${error}"></div>
+
+<form method="post" action="/rag/ask">
+	<textarea name="question" rows="2" placeholder="Например: Какое заклинание отделяет душу от тела?"></textarea>
+	<button type="submit">Спросить обе модели</button>
+</form>
+
+<div th:if="${result}">
+	<div class="sources">
+		<div><b>Контекст (топ-6):</b></div>
+		<div th:each="h : ${result.sources}">
+			<span class="section" th:text="${h.section}">раздел</span>
+			<span th:text="' | чанк #' + ${h.chunkId} + ' | ' + ${#numbers.formatDecimal(h.score * 100, 1, 0)} + '%'">чанк</span>
+		</div>
+	</div>
+	<div class="cols">
+		<div class="col">
+			<h2>Локально — qwen2.5:3b</h2>
+			<div class="answer" th:text="${result.localAnswer}">ответ</div>
+			<div class="time" th:text="${#numbers.formatDecimal(result.localSeconds, 1, 1)} + ' с'">0 с</div>
+		</div>
+		<div class="col">
+			<h2>Облако — deepseek-v4-flash</h2>
+			<div class="answer" th:text="${result.cloudAnswer}">ответ</div>
+			<div class="time" th:text="${#numbers.formatDecimal(result.cloudSeconds, 1, 1)} + ' с'">0 с</div>
+		</div>
+	</div>
+</div>
+
+<form method="post" action="/rag/control">
+	<button type="submit">Прогнать 6 контрольных на обеих моделях</button>
+	<span class="hint">12 LLM-вызовов, локальная модель медленная — займёт пару минут</span>
+</form>
+
+<div class="summary" th:if="${rows}">
+	Итог: локально <span th:text="${localHits}">0</span>/<span th:text="${#lists.size(rows)}">6</span>
+	(в среднем <span th:text="${localAvg}">0</span> с/ответ),
+	облако <span th:text="${cloudHits}">0</span>/<span th:text="${#lists.size(rows)}">6</span>
+	(в среднем <span th:text="${cloudAvg}">0</span> с/ответ)
+</div>
+<table th:if="${rows}">
+	<tr><th>Вопрос</th><th>Маркер</th><th>Локально</th><th>с</th><th>Облако</th><th>с</th></tr>
+	<tr th:each="r : ${rows}">
+		<td th:text="${r.question}"></td>
+		<td th:text="${r.marker}"></td>
+		<td><span th:class="${r.localHit} ? 'hit' : 'miss'" th:text="${r.localHit} ? 'есть' : 'нет'"></span></td>
+		<td th:text="${#numbers.formatDecimal(r.localSeconds, 1, 1)}"></td>
+		<td><span th:class="${r.cloudHit} ? 'hit' : 'miss'" th:text="${r.cloudHit} ? 'есть' : 'нет'"></span></td>
+		<td th:text="${#numbers.formatDecimal(r.cloudSeconds, 1, 1)}"></td>
+	</tr>
+</table>
+
+</body>
+</html>

@@ -25,3 +25,18 @@ spring:
       chat:
         options:
           model: qwen2.5:3b
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY}
+      chat:
+        options:
+          model: deepseek-v4-flash
+          thinking:
+            type: disabled
+    embedding:
+      transformer:
+        cache:
+          directory: ${user.home}/.spring-ai-model-cache
+        onnx:
+          model-uri: https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/onnx/model_quantized.onnx
+        tokenizer:
+          uri: https://huggingface.co/Xenova/paraphrase-multilingual-MiniLM-L12-v2/resolve/main/tokenizer.json

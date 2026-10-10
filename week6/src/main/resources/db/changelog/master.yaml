@@ -16,3 +16,16 @@ databaseChangeLog:
               ON SPRING_AI_CHAT_MEMORY(conversation_id, "timestamp");
               CREATE INDEX SPRING_AI_CHAT_MEMORY_CONVERSATION_ID_SEQUENCE_ID_IDX
               ON SPRING_AI_CHAT_MEMORY(conversation_id, sequence_id);
+  - changeSet:
+      id: 002-create-doc-chunks
+      author: tutorial
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE doc_chunks (
+                  id bigserial PRIMARY KEY,
+                  section VARCHAR(512),
+                  chunk_id INT NOT NULL,
+                  content TEXT NOT NULL,
+                  embedding TEXT NOT NULL
+              );
