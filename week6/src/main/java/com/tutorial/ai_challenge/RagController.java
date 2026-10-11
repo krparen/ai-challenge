@@ -64,54 +64,78 @@ public class RagController {
 	}
 
 	@PostMapping("/rag/ask")
-	public String ask(@RequestParam String question, Model model) {
+	public String ask(@RequestParam String question,
+			@RequestParam(name = "mode", required = false) String mode, Model model) {
+		boolean optimized = !"baseline".equals(mode);
 		List<RagSearchService.Hit> hits = search.search(question, 6);
-		String context = contextOf(hits);
-		long t1 = System.currentTimeMillis();
-		String local = localChatClient.prompt().user(context + "\n\nВопрос: " + question).call().content();
-		double localSeconds = (System.currentTimeMillis() - t1) / 1000.0;
-		long t2 = System.currentTimeMillis();
-		String cloud = cloudChatClient.prompt().user(context + "\n\nВопрос: " + question).call().content();
-		double cloudSeconds = (System.currentTimeMillis() - t2) / 1000.0;
-		model.addAttribute("result", new AskResult(question, local.trim(), cloud.trim(), localSeconds, cloudSeconds, hits));
+		String prompt = contextOf(hits) + "\n\nВопрос: " + question;
+		Answer local = answer(localChatClient, prompt, optimized);
+		Answer cloud = answer(cloudChatClient, prompt, false);
+		model.addAttribute("result", new AskResult(question, local.text(), cloud.text(),
+				local.seconds(), cloud.seconds(), hits));
+		model.addAttribute("mode", mode);
 		model.addAttribute("indexed", count());
 		return "rag";
 	}
 
 	@PostMapping("/rag/control")
-	public String control(Model model) {
+	public String control(@RequestParam(name = "mode", required = false) String mode, Model model) {
+		boolean optimized = !"baseline".equals(mode);
 		List<ControlItem> items = controlItems();
 		List<ControlRow> rows = new ArrayList<>();
 		double localTotal = 0, cloudTotal = 0;
 		int localHits = 0, cloudHits = 0;
+		int localTokens = 0, cloudTokens = 0;
 		for (ControlItem item : items) {
 			List<RagSearchService.Hit> hits = search.search(item.question(), 6);
 			String prompt = contextOf(hits) + "\n\nВопрос: " + item.question();
-			long t1 = System.currentTimeMillis();
-			String local = localChatClient.prompt().user(prompt).call().content().trim();
-			double localSeconds = (System.currentTimeMillis() - t1) / 1000.0;
-			long t2 = System.currentTimeMillis();
-			String cloud = cloudChatClient.prompt().user(prompt).call().content().trim();
-			double cloudSeconds = (System.currentTimeMillis() - t2) / 1000.0;
-			boolean localHit = contains(local, item.marker());
-			boolean cloudHit = contains(cloud, item.marker());
+			Answer local = answer(localChatClient, prompt, optimized);
+			Answer cloud = answer(cloudChatClient, prompt, false);
+			boolean localHit = contains(local.text(), item.marker());
+			boolean cloudHit = contains(cloud.text(), item.marker());
 			if (localHit) {
 				localHits++;
 			}
 			if (cloudHit) {
 				cloudHits++;
 			}
-			localTotal += localSeconds;
-			cloudTotal += cloudSeconds;
-			rows.add(new ControlRow(item.question(), item.marker(), localHit, cloudHit, localSeconds, cloudSeconds));
+			localTotal += local.seconds();
+			cloudTotal += cloud.seconds();
+			localTokens += local.tokens();
+			cloudTokens += cloud.tokens();
+			rows.add(new ControlRow(item.question(), item.marker(), localHit, cloudHit,
+					local.seconds(), cloud.seconds()));
 		}
 		model.addAttribute("rows", rows);
+		model.addAttribute("mode", mode);
 		model.addAttribute("localHits", localHits);
 		model.addAttribute("cloudHits", cloudHits);
 		model.addAttribute("localAvg", Math.round(localTotal / rows.size() * 10) / 10.0);
 		model.addAttribute("cloudAvg", Math.round(cloudTotal / rows.size() * 10) / 10.0);
+		model.addAttribute("localTokens", localTokens);
+		model.addAttribute("cloudTokens", cloudTokens);
 		model.addAttribute("indexed", count());
 		return "rag";
+	}
+
+	private record Answer(String text, double seconds, int tokens) {
+	}
+
+	private static Answer answer(ChatClient client, String prompt, boolean optimized) {
+		var spec = client.prompt();
+		if (optimized) {
+			spec = spec.system(RagConfig.LOCAL_SYSTEM_PROMPT).options(RagConfig.localOptions());
+		}
+		else {
+			spec = spec.system(RagConfig.CLOUD_SYSTEM_PROMPT);
+		}
+		spec = spec.user(prompt);
+		long t = System.currentTimeMillis();
+		var chatResponse = spec.call().chatResponse();
+		double seconds = (System.currentTimeMillis() - t) / 1000.0;
+		Integer completion = chatResponse.getMetadata().getUsage().getCompletionTokens();
+		return new Answer(chatResponse.getResult().getOutput().getText().trim(), seconds,
+				completion == null ? 0 : completion);
 	}
 
 	private static String contextOf(List<RagSearchService.Hit> hits) {

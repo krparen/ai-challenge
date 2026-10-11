@@ -46,6 +46,7 @@
 <form method="post" action="/rag/ask">
 	<textarea name="question" rows="2" placeholder="Например: Какое заклинание отделяет душу от тела?"></textarea>
 	<button type="submit">Спросить обе модели</button>
+	<label class="hint"><input type="checkbox" name="mode" value="baseline"> база (без оптимизаций)</label>
 </form>
 
 <div th:if="${result}">
@@ -58,12 +59,12 @@
 	</div>
 	<div class="cols">
 		<div class="col">
-			<h2>Локально — qwen2.5:3b</h2>
+			<h2>Локально — qwen2.5:3b (оптимизирована: temp 0.1, num_predict 220, num_ctx 8192)</h2>
 			<div class="answer" th:text="${result.localAnswer}">ответ</div>
 			<div class="time" th:text="${#numbers.formatDecimal(result.localSeconds, 1, 1)} + ' с'">0 с</div>
 		</div>
 		<div class="col">
-			<h2>Облако — deepseek-v4-flash</h2>
+			<h2>Облако — deepseek-v4-flash (базовые настройки)</h2>
 			<div class="answer" th:text="${result.cloudAnswer}">ответ</div>
 			<div class="time" th:text="${#numbers.formatDecimal(result.cloudSeconds, 1, 1)} + ' с'">0 с</div>
 		</div>
@@ -72,14 +73,17 @@
 
 <form method="post" action="/rag/control">
 	<button type="submit">Прогнать 6 контрольных на обеих моделях</button>
-	<span class="hint">12 LLM-вызовов, локальная модель медленная — займёт пару минут</span>
+	<label class="hint"><input type="checkbox" name="mode" value="baseline"> база (без оптимизаций)</label>
+	<span class="hint">12 LLM-вызовов — локальная модель медленная, займёт несколько минут</span>
 </form>
+<p class="hint" th:if="${mode == 'baseline'}"><b>Прогон в режиме БАЗЫ: общий промпт, настройки модели по умолчанию.</b></p>
+<p class="hint" th:if="${mode != null and mode != 'baseline'}"><b>Прогон в режиме ОПТИМИЗАЦИИ: промпт-шаблон под извлечение формул, temp 0, seed 42, лимит 220 ток.</b></p>
 
 <div class="summary" th:if="${rows}">
 	Итог: локально <span th:text="${localHits}">0</span>/<span th:text="${#lists.size(rows)}">6</span>
-	(в среднем <span th:text="${localAvg}">0</span> с/ответ),
+	(в среднем <span th:text="${localAvg}">0</span> с/ответ, всего <span th:text="${localTokens}">0</span> ток),
 	облако <span th:text="${cloudHits}">0</span>/<span th:text="${#lists.size(rows)}">6</span>
-	(в среднем <span th:text="${cloudAvg}">0</span> с/ответ)
+	(в среднем <span th:text="${cloudAvg}">0</span> с/ответ, всего <span th:text="${cloudTokens}">0</span> ток)
 </div>
 <table th:if="${rows}">
 	<tr><th>Вопрос</th><th>Маркер</th><th>Локально</th><th>с</th><th>Облако</th><th>с</th></tr>
